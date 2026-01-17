@@ -85,7 +85,7 @@ If you use this dataset in your work, please cite the associated paper:
 
 H. H. Hassan *et al.*,  
 *Machine Learning Framework for Optimizing Biohydrogen Yields in Waste-Fed Dark Fermentation Systems*,  
-Journal, Year, DOI (to be added after publication).
+Journal, Year, DOI.
 
 ---
 
