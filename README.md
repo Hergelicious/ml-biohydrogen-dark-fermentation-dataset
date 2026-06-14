@@ -2,7 +2,7 @@
 
 **Version:** v1.0 (dataset used in the submitted manuscript)
 
-This repository contains a standardized dataset of **246 experimental observations** on biohydrogen production via waste-fed dark fermentation, compiled from **88 independent peer-reviewed studies (2002–2025)**. All hydrogen yield values have been harmonized to a single standard unit to support machine learning modelling and cross-study comparison.
+This repository contains a standardized dataset of **246 experimental observations** on biohydrogen production via waste-fed dark fermentation, compiled from **84 independent peer-reviewed studies (2002–2025)**. All hydrogen yield values have been harmonized to a single standard unit to support machine learning modelling and cross-study comparison.
 
 ---
 
