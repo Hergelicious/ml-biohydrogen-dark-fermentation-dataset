@@ -1,0 +1,69 @@
+Specific Substrate (as reported in literature),General Substrate Category (used in ML model)
+Glucose,Simple carbohydrates / Sugars
+Sucrose,Simple carbohydrates / Sugars
+Lactose,Simple carbohydrates / Sugars
+Maltose,Simple carbohydrates / Sugars
+Cellobiose,Simple carbohydrates / Sugars
+D-Xylose,Simple carbohydrates / Sugars
+L-Arabinose,Simple carbohydrates / Sugars
+Corn starch,Polysaccharides / Starch
+Wheat starch,Polysaccharides / Starch
+Sweet potato starch,Polysaccharides / Starch
+Starch (generic),Polysaccharides / Starch
+Sugarcane molasses,Polysaccharides / Starch
+Wheat straw,Lignocellulosic biomass
+Corn stover / corn stalk / corn stalk waste,Lignocellulosic biomass
+Rice straw,Lignocellulosic biomass
+Cellulose (pure),Lignocellulosic biomass
+Sugarcane bagasse,Lignocellulosic biomass
+Sweet sorghum bagasse,Lignocellulosic biomass
+Sweet sorghum plant,Lignocellulosic biomass
+Pretreated maize leaves,Lignocellulosic biomass
+Untreated maize leaves,Lignocellulosic biomass
+Silphium leaves,Lignocellulosic biomass
+Grass / grass silage,Lignocellulosic biomass
+Barley hulls,Lignocellulosic biomass
+Delignified wood,Lignocellulosic biomass
+Pine tree wood,Lignocellulosic biomass
+Switchgrass steam-exploded liquor,Lignocellulosic biomass
+"Wheat straw (straw, general)",Lignocellulosic biomass
+Rice husk,Lignocellulosic biomass
+Crude glycerol,Glycerol / Biodiesel by-product
+Byproduct of biodiesel production (sunflower oil),Glycerol / Biodiesel by-product
+Palm oil mill effluent (POME),Palm oil mill effluent
+Cassava wastewater,Industrial organic wastewater
+Citric acid wastewater,Industrial organic wastewater
+Beverage washing wastewater,Industrial organic wastewater
+Rice winery wastewater (not in this dataset but mapped),Industrial organic wastewater
+Cattle wastewater,Industrial organic wastewater
+Synthetic wastewater,Industrial organic wastewater
+Vinasse and Nejayote,Industrial organic wastewater
+Cheese whey,Dairy waste / Cheese whey
+Sugarcane molasses (liquid by-product),Dairy waste / Cheese whey
+"Algal biomass (Scenedesmus, Chlorella, Thermococcus substrates)",Algae biomass
+Coffee mucilage + organic waste,Coffee mucilage / agro-industrial residues
+Spent coffee grounds,Coffee mucilage / agro-industrial residues
+Food waste (general),Food waste / Kitchen waste
+Kitchen waste,Food waste / Kitchen waste
+Synthetic food waste,Food waste / Kitchen waste
+Food waste (mixed cafeteria waste),Food waste / Kitchen waste
+Food waste leachates,Food waste / Kitchen waste
+Vegetables,Food waste / Kitchen waste
+Vegetable kitchen waste,Food waste / Kitchen waste
+Apple,Food waste / Kitchen waste
+Melon,Food waste / Kitchen waste
+Grape,Food waste / Kitchen waste
+Apple + Melon + Grape (mix),Food waste / Kitchen waste
+Fruit and vegetable waste,Food waste / Kitchen waste
+Organic waste (generic/multi-component),Mixed organic wastes
+Organic municipal waste + slaughterhouse waste,Mixed organic wastes
+Food waste + sewage sludge,Mixed organic wastes
+Food waste & sewage sludge,Mixed organic wastes
+Pig slurry,Mixed organic wastes
+Cattle manure,Mixed organic wastes
+Sewage biosolids,Mixed organic wastes
+Rice slurry,Mixed organic wastes
+Potato + pumpkin mixture,Mixed organic wastes
+Municipal solid waste (MSW),Organic municipal solid waste
+Organic fraction of MSW (OFMSW),Organic municipal solid waste
+OFMSW (Organic Fraction of Municipal Solid Waste),Organic municipal solid waste
