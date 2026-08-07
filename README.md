@@ -8,7 +8,7 @@ This repository contains a standardized dataset of **246 experimental observatio
 
 ## Associated Manuscript
 
-H. H. Hassan, A. M. Abdelkader,
+H. H. Hassan, A. M. Abdelkader,Medhat Mostafa
 *Ensemble Machine Learning for Cross-Study Prediction and Optimization of Biohydrogen Yield from Waste-Fed Dark Fermentation*,
  [Year], DOI: [to be updated upon acceptance]
 
@@ -113,7 +113,7 @@ The full dataset with conversion notes is provided in **Supplementary Table S3**
 
 If you use this dataset or code in your work, please cite:
 
-> H. H. Hassan, A. M. Abdelkader,
+> H. H. Hassan, A. M. Abdelkader,Medhat Mostafa
 > *Ensemble Machine Learning for Cross-Study Prediction and Optimization of Biohydrogen Yield from Waste-Fed Dark Fermentation*,
 >, [Year], DOI: [to be updated upon acceptance]
 
