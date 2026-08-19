@@ -2,106 +2,143 @@
 # -*- coding: utf-8 -*-
 
 """
-04_energy_balance.py -- couple the meta-regression temperature coefficient
-to a reactor heat balance, to test whether the yield-optimal temperature
-is also the energy-optimal one.
+04_energy_balance.py
 
-Per cubic metre of aqueous feed:
+Energy-balance and break-even analysis linking the Step 03
+mixed-effects temperature association to reactor heating demand.
 
-    heating duty
-        Q = cp * rho * dT * (1 - eta) / 1000
+The Step 03 meta-regression models:
 
-    hydrogen energy
-        E = Y * S * KJ_PER_DM3
+    log(1 + y) = beta_T * T + other moderators + study random effect
 
-where:
+where y is hydrogen yield [dm3 H2 g^-1 VS].
 
-    Y   = hydrogen yield (dm3 H2 g-1 VS)
-    S   = solids loading (g VS L-1)
-    eta = heat-recovery efficiency
+Because beta_T is estimated on the log1p(y) scale, it is not
+interpreted as a raw hydrogen-yield increase per °C.
+
+For a 37 -> 55 °C temperature shift, the model-implied raw-scale
+yield is calculated as:
+
+    y_55 = exp(log(1 + y_37) + beta_T * (55 - 37)) - 1
 
 and:
 
-    KJ_PER_DM3 = H2_DENSITY * H2_LHV
+    Delta_y = y_55 - y_37
 
-Setting the incremental hydrogen energy equal to the additional heating
-duty gives the break-even yield uplift:
+The resulting yield difference is a model-derived association,
+not a causal experimental temperature effect.
 
-    dY = heat_duty / (S * KJ_PER_DM3)
+The raw-scale yield difference is evaluated at the median yield
+of the modelling dataset. Because the log1p back-transformation
+is nonlinear, the resulting uplift is baseline-dependent.
 
-Mixing and pumping energy are excluded, so the reported break-even
-thresholds are optimistic.
+Inputs
+------
+    results/03_metaregression.csv
+    data/dataset_modelling_224.csv
 
-Reads:
-    results/03_temperature_effect.csv
-
-Writes:
+Outputs
+-------
     results/04_energy_balance.csv
     results/04_breakeven_uplift.csv
     results/04_breakeven_loading.csv
 """
 
-
-# ============================================================
-# 1. IMPORTS
-# ============================================================
-
 from pathlib import Path
-import sys
 
 import numpy as np
 import pandas as pd
 
 
 # ============================================================
-# 2. PROJECT PATH
+# PATHS
 # ============================================================
 
-# This file is located in:
-#
-#     repo/src/04_energy_balance.py
-#
-# Therefore the repository root is one directory above src/.
+BASE_DIR = Path.cwd()
 
-SRC_DIR = Path(__file__).resolve().parent
-ROOT = SRC_DIR.parent
+DATA_DIR = BASE_DIR / "data"
+RESULTS = BASE_DIR / "results"
 
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-
-# ============================================================
-# 3. IMPORT SHARED DEFINITIONS
-# ============================================================
-
-from common import (
-    CP_WATER,
-    H2_DENSITY,
-    H2_LHV,
-    RESULTS,
-    RHO_WATER,
+DATA_DIR.mkdir(
+    parents=True,
+    exist_ok=True
 )
 
+RESULTS.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+MODEL_CSV = DATA_DIR / "dataset_modelling_224.csv"
+
 
 # ============================================================
-# 4. CONSTANTS
+# CONSTANTS
 # ============================================================
+
+# ------------------------------------------------------------
+# Water properties
+# ------------------------------------------------------------
+
+# kJ kg^-1 K^-1
+CP_WATER = 4.18
+
+# kg m^-3
+RHO_WATER = 1000.0
+
+
+# ------------------------------------------------------------
+# Hydrogen properties
+# ------------------------------------------------------------
+
+# kg H2 m^-3
+H2_DENSITY = 0.0899
+
+# MJ kg^-1 H2
+H2_LHV = 120.0
+
+# Hydrogen energy per dm3:
+#
+# 0.0899 kg H2 m^-3 × 120 MJ kg^-1
+# = 10.788 MJ m^-3
+#
+# Therefore:
+#
+# 1 dm3 H2 = 0.010788 MJ
+#           = 10.788 kJ
 
 KJ_PER_DM3 = (
     H2_DENSITY
     * H2_LHV
 )
 
+
+# ------------------------------------------------------------
+# Temperature points
+# ------------------------------------------------------------
+
+T_INFLUENT = 20.0
 T_MESO = 37.0
 T_THERMO = 55.0
-T_INFLUENT = 20.0
+
+
+# ------------------------------------------------------------
+# Heat-recovery scenarios
+# ------------------------------------------------------------
 
 ETAS = [
     0.0,
     0.5,
     0.7,
-    0.85,
+    0.85
 ]
+
+
+# ------------------------------------------------------------
+# Solids-loading scenarios
+#
+# g VS L^-1
+# ------------------------------------------------------------
 
 LOADINGS = [
     10,
@@ -109,35 +146,53 @@ LOADINGS = [
     30,
     50,
     100,
-    150,
+    150
 ]
+
+
+# ------------------------------------------------------------
+# Typical chemical energy content of VS
+#
+# MJ kg^-1 VS
+# ------------------------------------------------------------
 
 VS_CALORIFIC = 15.6
 
 
 # ============================================================
-# 5. HYDROGEN ENERGY
+# ENERGY FUNCTIONS
 # ============================================================
 
-def h2_energy(
-    Y,
-    S,
-):
+def h2_energy(Y, S):
     """
-    Calculate hydrogen energy per m3 of feed.
+    Calculate hydrogen energy produced per m3 of feed.
 
     Parameters
     ----------
     Y : float
-        Hydrogen yield in dm3 H2 g-1 VS.
+        Hydrogen yield [dm3 H2 g^-1 VS].
 
     S : float
-        Solids loading in g VS L-1.
+        Solids loading [g VS L^-1].
 
     Returns
     -------
     float
-        Hydrogen energy in MJ m-3.
+        Hydrogen energy [MJ m^-3 feed].
+
+    Unit conversion:
+
+        Y [dm3 H2 g^-1 VS]
+        × S [g VS L^-1]
+        × 1000 [L m^-3]
+        × KJ_PER_DM3 [kJ dm^-3]
+        / 1000 [kJ MJ^-1]
+
+    Therefore:
+
+        E_H2 = Y × S × KJ_PER_DM3
+
+    in MJ m^-3.
     """
 
     return (
@@ -147,29 +202,22 @@ def h2_energy(
     )
 
 
-# ============================================================
-# 6. HEAT DUTY
-# ============================================================
-
-def heat_duty(
-    dT,
-    eta,
-):
+def heat_duty(dT, eta):
     """
-    Calculate heating duty per m3 of feed.
+    Calculate net heating duty per m3 of feed.
 
     Parameters
     ----------
     dT : float
-        Temperature increase in degC.
+        Temperature increase [°C].
 
     eta : float
-        Heat-recovery efficiency.
+        Heat-recovery efficiency [0–1].
 
     Returns
     -------
     float
-        Heating duty in MJ m-3.
+        Net heating duty [MJ m^-3].
     """
 
     return (
@@ -181,181 +229,404 @@ def heat_duty(
     )
 
 
-# ============================================================
-# 7. BREAK-EVEN YIELD UPLIFT
-# ============================================================
-
-def breakeven_uplift(
-    dT,
-    eta,
-    S,
-):
+def breakeven_uplift(dT, eta, S):
     """
-    Calculate the hydrogen-yield increase required to offset
+    Calculate the raw-scale hydrogen-yield increase required
+    to offset the heating duty.
+
+    Parameters
+    ----------
+    dT : float
+        Temperature increase [°C].
+
+    eta : float
+        Heat-recovery efficiency [0–1].
+
+    S : float
+        Solids loading [g VS L^-1].
+
+    Returns
+    -------
+    float
+        Required yield increase [dm3 H2 g^-1 VS].
+    """
+
+    denominator = (
+        S
+        * KJ_PER_DM3
+    )
+
+    if denominator <= 0:
+        return np.nan
+
+    return (
+        heat_duty(dT, eta)
+        / denominator
+    )
+
+
+def breakeven_loading(dT, eta, dY):
+    """
+    Calculate the solids loading required for a given
+    model-implied raw-scale yield difference to offset
     additional heating duty.
 
-    Returns
-    -------
-    float
-        Required yield uplift in dm3 H2 g-1 VS.
-    """
+    Parameters
+    ----------
+    dT : float
+        Temperature increase [°C].
 
-    return (
-        heat_duty(
-            dT,
-            eta,
-        )
-        /
-        (
-            S
-            * KJ_PER_DM3
-        )
-    )
+    eta : float
+        Heat-recovery efficiency [0–1].
 
-
-# ============================================================
-# 8. BREAK-EVEN SOLIDS LOADING
-# ============================================================
-
-def breakeven_loading(
-    dT,
-    eta,
-    dY,
-):
-    """
-    Calculate the solids loading at which a specified hydrogen-yield
-    uplift offsets the additional heating duty.
+    dY : float
+        Model-implied yield difference [dm3 H2 g^-1 VS].
 
     Returns
     -------
     float
-        Break-even solids loading in g VS L-1.
+        Break-even solids loading [g VS L^-1].
     """
 
+    if (
+        not np.isfinite(dY)
+        or dY <= 0
+    ):
+        return np.nan
+
+    denominator = (
+        dY
+        * KJ_PER_DM3
+    )
+
+    if denominator <= 0:
+        return np.nan
+
     return (
-        heat_duty(
-            dT,
-            eta,
-        )
-        /
-        (
-            dY
-            * KJ_PER_DM3
-        )
+        heat_duty(dT, eta)
+        / denominator
     )
 
 
 # ============================================================
-# 9. READ MEASURED TEMPERATURE EFFECT
+# MODEL-IMPLIED TEMPERATURE UPLIFT
 # ============================================================
 
-def measured_uplift():
+def model_implied_uplift_from_metaregression():
     """
-    Read the model-implied 37 -> 55 degC yield difference generated
-    by 03_statistics.py.
+    Retrieve the Step 03 temperature coefficient and convert
+    its log1p-scale association into a model-implied raw-yield
+    difference for a 37 -> 55 °C temperature shift.
+
+    Step 03 uses:
+
+        ly = log1p(y)
+
+    Therefore:
+
+        log1p(y_55)
+            =
+        log1p(y_37)
+        + beta_T * DeltaT
+
+    and:
+
+        y_55
+            =
+        expm1(
+            log1p(y_37)
+            + beta_T * DeltaT
+        )
+
+    The raw-scale difference is:
+
+        Delta_y = y_55 - y_37
+
+    The baseline y_37 is taken as the median hydrogen yield
+    in dataset_modelling_224.csv.
+
+    Because log1p/expm1 is nonlinear, the resulting raw-scale
+    uplift is baseline-dependent.
 
     Returns
     -------
     tuple
-        Yield difference and its lower and upper confidence limits.
+        baseline_y
+        dY
+        dY_lo
+        dY_hi
+        beta
+        beta_lo
+        beta_hi
+        y_thermo
+        y_thermo_lo
+        y_thermo_hi
     """
 
-    path = (
-        RESULTS
-        / "03_temperature_effect.csv"
-    )
+    # --------------------------------------------------------
+    # 1. Read Step 03 results
+    # --------------------------------------------------------
 
-    if not path.exists():
+    mr_path = RESULTS / "03_metaregression.csv"
 
+    if not mr_path.exists():
         raise FileNotFoundError(
-            "\nRequired file was not found:\n"
-            f"{path}\n\n"
-            "Run 03_statistics.py before running "
-            "04_energy_balance.py."
+            "\n03_metaregression.csv was not found.\n\n"
+            "Run Step 03 first."
         )
 
-    result = pd.read_csv(
-        path
-    ).iloc[0]
+    mr = pd.read_csv(mr_path)
+
+
+    # --------------------------------------------------------
+    # 2. Validate output structure
+    # --------------------------------------------------------
+
+    required_columns = [
+        "term",
+        "coef",
+        "ci_lo",
+        "ci_hi"
+    ]
+
+    missing = [
+        c
+        for c in required_columns
+        if c not in mr.columns
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "03_metaregression.csv is missing "
+            f"required columns: {missing}"
+        )
+
+
+    # --------------------------------------------------------
+    # 3. Locate temperature coefficient
+    # --------------------------------------------------------
+
+    temperature_rows = mr[
+        mr["term"].astype(str) == "Tn"
+    ]
+
+    if temperature_rows.empty:
+        raise RuntimeError(
+            "Temperature coefficient 'Tn' was not found "
+            "in 03_metaregression.csv."
+        )
+
+    row = temperature_rows.iloc[0]
+
+    beta = float(row["coef"])
+    beta_lo = float(row["ci_lo"])
+    beta_hi = float(row["ci_hi"])
+
+
+    # --------------------------------------------------------
+    # 4. Validate coefficients
+    # --------------------------------------------------------
+
+    if not all(
+        np.isfinite(
+            [
+                beta,
+                beta_lo,
+                beta_hi
+            ]
+        )
+    ):
+        raise RuntimeError(
+            "Temperature coefficient or confidence limits "
+            "contain non-finite values."
+        )
+
+
+    # --------------------------------------------------------
+    # 5. Read modelling dataset
+    # --------------------------------------------------------
+
+    if not MODEL_CSV.exists():
+        raise FileNotFoundError(
+            "\ndataset_modelling_224.csv was not found at:\n"
+            f"{MODEL_CSV}\n\n"
+            "Run Step 01 first."
+        )
+
+    d = pd.read_csv(MODEL_CSV)
+
+
+    # --------------------------------------------------------
+    # 6. Validate target
+    # --------------------------------------------------------
+
+    if "y" not in d.columns:
+        raise RuntimeError(
+            "Column 'y' was not found in "
+            "dataset_modelling_224.csv."
+        )
+
+    y = pd.to_numeric(
+        d["y"],
+        errors="coerce"
+    ).dropna()
+
+    if len(y) == 0:
+        raise RuntimeError(
+            "Column 'y' contains no usable numeric observations."
+        )
+
+
+    # --------------------------------------------------------
+    # 7. Validate yield
+    # --------------------------------------------------------
+
+    if (y < 0).any():
+        raise RuntimeError(
+            "Negative hydrogen-yield values were found in "
+            "column 'y'."
+        )
+
+
+    # --------------------------------------------------------
+    # 8. Baseline yield
+    # --------------------------------------------------------
+
+    baseline_y = float(y.median())
+
+
+    # --------------------------------------------------------
+    # 9. Temperature interval
+    # --------------------------------------------------------
+
+    span = T_THERMO - T_MESO
+
+
+    # --------------------------------------------------------
+    # 10. Baseline on log1p scale
+    # --------------------------------------------------------
+
+    baseline_log = np.log1p(baseline_y)
+
+
+    # --------------------------------------------------------
+    # 11. Temperature association on log1p scale
+    # --------------------------------------------------------
+
+    delta_log = beta * span
+    delta_log_lo = beta_lo * span
+    delta_log_hi = beta_hi * span
+
+
+    # --------------------------------------------------------
+    # 12. Back-transform to raw yield
+    # --------------------------------------------------------
+
+    y_thermo = np.expm1(
+        baseline_log
+        + delta_log
+    )
+
+    y_thermo_lo = np.expm1(
+        baseline_log
+        + delta_log_lo
+    )
+
+    y_thermo_hi = np.expm1(
+        baseline_log
+        + delta_log_hi
+    )
+
+
+    # --------------------------------------------------------
+    # 13. Raw-scale yield difference
+    # --------------------------------------------------------
+
+    dY = y_thermo - baseline_y
+    dY_lo = y_thermo_lo - baseline_y
+    dY_hi = y_thermo_hi - baseline_y
+
 
     return (
-        result["implied_difference"],
-        result["ci_lo"],
-        result["ci_hi"],
+        baseline_y,
+        dY,
+        dY_lo,
+        dY_hi,
+        beta,
+        beta_lo,
+        beta_hi,
+        y_thermo,
+        y_thermo_lo,
+        y_thermo_hi
     )
 
 
 # ============================================================
-# 10. MAIN ANALYSIS
+# MAIN ANALYSIS
 # ============================================================
 
 def main():
 
     print("=" * 70)
-    print("ENERGY BALANCE ANALYSIS")
+    print("04 — ENERGY BALANCE")
     print("=" * 70)
 
-    print(
-        "\nRepository:"
-    )
-
-    print(
-        ROOT
-    )
-
-    print(
-        "\nResults directory:"
-    )
-
-    print(
-        RESULTS
-    )
-
-    RESULTS.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    # --------------------------------------------------------
-    # Heat-balance assumptions
-    # --------------------------------------------------------
-
-    dT = (
-        T_THERMO
-        - T_INFLUENT
-    )
-
-    print(
-        "\nHEAT BALANCE ASSUMPTIONS"
-    )
-
-    print(
-        "  cp %.2f kJ kg-1 K-1, "
-        "rho %.0f kg m-3, "
-        "influent %.0f degC"
-        % (
-            CP_WATER,
-            RHO_WATER,
-            T_INFLUENT,
-        )
-    )
-
-    print(
-        "  1 dm3 H2 = %.2f kJ "
-        "(LHV %.0f MJ kg-1, density %.4f kg m-3)"
-        % (
-            KJ_PER_DM3,
-            H2_LHV,
-            H2_DENSITY,
-        )
-    )
-
-    print(
-        "  mixing and pumping excluded\n"
-    )
 
     # ========================================================
-    # 11. NET ENERGY PER m3
+    # Heat-balance assumptions
+    # ========================================================
+
+    print("\nHEAT BALANCE ASSUMPTIONS")
+
+    print(
+        "  cp %.2f kJ kg-1 K-1"
+        % CP_WATER
+    )
+
+    print(
+        "  rho %.0f kg m-3"
+        % RHO_WATER
+    )
+
+    print(
+        "  influent temperature %.0f °C"
+        % T_INFLUENT
+    )
+
+    print(
+        "  mesophilic temperature %.0f °C"
+        % T_MESO
+    )
+
+    print(
+        "  thermophilic temperature %.0f °C"
+        % T_THERMO
+    )
+
+    print(
+        "  1 dm3 H2 = %.3f kJ"
+        % KJ_PER_DM3
+    )
+
+    print(
+        "  H2 LHV = %.0f MJ kg-1"
+        % H2_LHV
+    )
+
+    print(
+        "  H2 density = %.4f kg m-3"
+        % H2_DENSITY
+    )
+
+    print(
+        "  mixing and pumping excluded"
+    )
+
+    print()
+
+
+    # ========================================================
+    # 1. Net energy per m3
     # ========================================================
 
     rows = []
@@ -364,23 +635,23 @@ def main():
         10,
         20,
         50,
-        100,
+        100
     ]:
 
         for T, Y in [
             (37, 0.15),
             (55, 0.25),
-            (70, 0.20),
+            (70, 0.20)
         ]:
 
             e = h2_energy(
                 Y,
-                S,
+                S
             )
 
             q = heat_duty(
                 T - T_INFLUENT,
-                0.70,
+                0.70
             )
 
             rows.append(
@@ -390,22 +661,16 @@ def main():
                     "yield_dm3_g": Y,
                     "h2_energy_MJ_m3": e,
                     "heat_duty_MJ_m3": q,
-                    "net_MJ_m3": e - q,
+                    "net_MJ_m3": e - q
                 }
             )
 
-    net = pd.DataFrame(
-        rows
-    )
 
-    net_path = (
-        RESULTS
-        / "04_energy_balance.csv"
-    )
+    net = pd.DataFrame(rows)
 
     net.to_csv(
-        net_path,
-        index=False,
+        RESULTS / "04_energy_balance.csv",
+        index=False
     )
 
     print(
@@ -413,20 +678,18 @@ def main():
         "(70% heat recovery)"
     )
 
-    print(
-        net.round(1)
-        .to_string(
-            index=False
-        )
-    )
+    print()
 
     print(
-        "  -> at 10 g VS L-1 the balance is negative "
-        "at every temperature tested.\n"
+        net.round(3)
+        .to_string(index=False)
     )
+
+    print()
+
 
     # ========================================================
-    # 12. REQUIRED YIELD UPLIFT
+    # 2. Required yield difference grid
     # ========================================================
 
     grid = pd.DataFrame(
@@ -435,75 +698,162 @@ def main():
         }
     )
 
-    temperature_span = (
-        T_THERMO
-        - T_MESO
-    )
-
     for eta in ETAS:
 
-        grid[
-            "eta_%d"
-            % int(
-                eta * 100
-            )
-        ] = [
+        column = "eta_%d" % int(eta * 100)
+
+        grid[column] = [
             breakeven_uplift(
-                temperature_span,
+                T_THERMO - T_MESO,
                 eta,
-                S,
+                S
             )
             for S in LOADINGS
         ]
 
-    uplift_path = (
-        RESULTS
-        / "04_breakeven_uplift.csv"
-    )
 
     grid.to_csv(
-        uplift_path,
-        index=False,
+        RESULTS / "04_breakeven_uplift.csv",
+        index=False
     )
 
     print(
-        "YIELD UPLIFT REQUIRED FOR "
-        "37 -> 55 degC TO PAY FOR ITS OWN HEAT "
-        "(dm3 H2 g-1)"
+        "YIELD DIFFERENCE REQUIRED FOR "
+        "37 → 55 °C TO PAY FOR HEATING"
     )
 
+    print("(dm3 H2 g-1 VS)")
+
+    print()
+
     print(
-        grid.round(3)
-        .to_string(
-            index=False
-        )
+        grid.round(4)
+        .to_string(index=False)
     )
+
+    print()
+
 
     # ========================================================
-    # 13. MEASURED TEMPERATURE UPLIFT
+    # 3. Model-implied temperature association
     # ========================================================
 
-    dY, dY_lo, dY_hi = (
-        measured_uplift()
+    (
+        baseline_y,
+        dY,
+        dY_lo,
+        dY_hi,
+        beta,
+        beta_lo,
+        beta_hi,
+        y_thermo,
+        y_thermo_lo,
+        y_thermo_hi
+    ) = model_implied_uplift_from_metaregression()
+
+
+    print(
+        "MODEL-IMPLIED TEMPERATURE ASSOCIATION"
+    )
+
+    print()
+
+    print(
+        "Meta-regression coefficient "
+        "on log1p(y): %+.6f per °C"
+        % beta
     )
 
     print(
-        "\nMODEL-IMPLIED YIELD DIFFERENCE, "
-        "37 -> 55 degC (back-transformed)"
-    )
-
-    print(
-        "  %+.3f dm3 H2 g-1 "
-        "(95%% CI %+.3f to %+.3f)"
+        "95%% CI: %+.6f to %+.6f"
         % (
-            dY,
-            dY_lo,
-            dY_hi,
+            beta_lo,
+            beta_hi
         )
     )
 
+    print()
+
+    print(
+        "Baseline yield "
+        "(dataset median): %.4f dm3 H2 g-1 VS"
+        % baseline_y
+    )
+
+    print(
+        "Temperature interval: "
+        "%.0f → %.0f °C"
+        % (
+            T_MESO,
+            T_THERMO
+        )
+    )
+
+    print()
+
+    print(
+        "Model-implied yield at %.0f °C "
+        "from the %.0f °C baseline:"
+        % (
+            T_THERMO,
+            T_MESO
+        )
+    )
+
+    print(
+        "  central : %.4f dm3 H2 g-1 VS"
+        % y_thermo
+    )
+
+    print(
+        "  lower CI: %.4f dm3 H2 g-1 VS"
+        % y_thermo_lo
+    )
+
+    print(
+        "  upper CI: %.4f dm3 H2 g-1 VS"
+        % y_thermo_hi
+    )
+
+    print()
+
+    print(
+        "Model-implied yield difference "
+        "for %.0f → %.0f °C:"
+        % (
+            T_MESO,
+            T_THERMO
+        )
+    )
+
+    print(
+        "  central : %+.4f dm3 H2 g-1 VS"
+        % dY
+    )
+
+    print(
+        "  lower CI: %+.4f dm3 H2 g-1 VS"
+        % dY_lo
+    )
+
+    print(
+        "  upper CI: %+.4f dm3 H2 g-1 VS"
+        % dY_hi
+    )
+
+    print()
+
+    print(
+        "NOTE: The raw-scale uplift is evaluated "
+        "at the dataset median baseline yield and "
+        "is therefore baseline-dependent."
+    )
+
+    print()
+
+
     # ========================================================
-    # 14. BREAK-EVEN LOADING
+    # 4. Break-even solids loading
     # ========================================================
 
     out = []
@@ -516,160 +866,174 @@ def main():
 
                 "breakeven_loading_gVS_L":
                     breakeven_loading(
-                        temperature_span,
+                        T_THERMO - T_MESO,
                         eta,
-                        dY,
+                        dY
                     ),
 
                 "loading_at_CI_low":
                     breakeven_loading(
-                        temperature_span,
+                        T_THERMO - T_MESO,
                         eta,
-                        dY_hi,
+                        dY_hi
                     ),
 
                 "loading_at_CI_high":
                     breakeven_loading(
-                        temperature_span,
+                        T_THERMO - T_MESO,
                         eta,
-                        dY_lo,
-                    ),
+                        dY_lo
+                    )
             }
         )
 
-    be = pd.DataFrame(
-        out
-    )
 
-    loading_path = (
-        RESULTS
-        / "04_breakeven_loading.csv"
-    )
+    be = pd.DataFrame(out)
 
     be.to_csv(
-        loading_path,
-        index=False,
+        RESULTS / "04_breakeven_loading.csv",
+        index=False
     )
 
     print(
-        "\nBREAK-EVEN SOLIDS LOADING "
-        "GIVEN THE MEASURED UPLIFT "
-        "(g VS L-1)"
+        "BREAK-EVEN SOLIDS LOADING "
+        "GIVEN THE MODEL-IMPLIED YIELD DIFFERENCE"
     )
 
-    print(
-        be.round(2)
-        .to_string(
-            index=False
-        )
-    )
+    print("(g VS L-1)")
+
+    print()
 
     print(
-        "  dilute industrial wastewater is typically "
-        "1-10 g VS L-1;"
+        be.round(3)
+        .to_string(index=False)
     )
 
-    print(
-        "  food-waste slurry is typically "
-        "40-120 g VS L-1."
-    )
+    print()
+
 
     # ========================================================
-    # 15. SUBSTRATE ENERGY RECOVERY
+    # 5. Hydrogen energy recovery
     # ========================================================
 
     print(
-        "\nFRACTION OF FEED CHEMICAL ENERGY "
-        "RECOVERED AS H2 "
-        "(VS at %.1f MJ kg-1)"
+        "FRACTION OF FEED CHEMICAL ENERGY "
+        "RECOVERED AS H2"
+    )
+
+    print(
+        "(VS calorific value = %.1f MJ kg-1)"
         % VS_CALORIFIC
     )
 
-    energy_cases = [
+    print()
+
+
+    # --------------------------------------------------------
+    # Theoretical Thauer limit:
+    #
+    # 4 mol H2 per mol hexose
+    #
+    # 4 × 22.414 dm3/mol
+    # -------------------
+    # 180.16 g/mol
+    #
+    # = 0.4978 dm3 H2 g^-1
+    # --------------------------------------------------------
+
+    thauer_yield = (
+        4.0
+        * 22.414
+        / 180.16
+    )
+
+
+    for label, Y in [
+
         (
             "dataset median yield",
-            0.111,
+            baseline_y
         ),
+
         (
             "Thauer limit, "
             "4 mol H2 per mol hexose",
-            4 * 22.414 / 180.16,
-        ),
-    ]
+            thauer_yield
+        )
 
-    for label, Y in energy_cases:
+    ]:
+
+        # Y [dm3/g]
+        #
+        # × 1000 g/kg
+        # × kJ/dm3
+        # / 1000 kJ/MJ
+        #
+        # = MJ/kg VS
 
         mj = (
             Y
-            * 1000
+            * 1000.0
             * KJ_PER_DM3
             / 1000.0
         )
 
         fraction = (
-            100
+            100.0
             * mj
             / VS_CALORIFIC
         )
 
         print(
-            "  %-40s "
-            "Y = %.3f -> %5.2f MJ per kg VS "
-            "(%4.1f%%)"
+            "  %-45s "
+            "Y = %.3f -> %6.2f MJ kg-1 VS "
+            "(%5.1f%%)"
             % (
                 label,
                 Y,
                 mj,
-                fraction,
+                fraction
             )
         )
 
+
+    print()
+
     print(
-        "  the remainder leaves as volatile fatty acids."
+        "  The remainder leaves primarily as "
+        "non-H2 products such as volatile fatty acids."
     )
+
 
     # ========================================================
-    # 16. OUTPUT FILES
+    # Files
     # ========================================================
 
+    print()
+
+    print("=" * 70)
+    print("FILES WRITTEN")
+    print("=" * 70)
+
     print(
-        "\n" + "=" * 70
+        RESULTS / "04_energy_balance.csv"
     )
 
     print(
-        "FILES WRITTEN"
+        RESULTS / "04_breakeven_uplift.csv"
     )
 
     print(
-        "=" * 70
+        RESULTS / "04_breakeven_loading.csv"
     )
 
-    print(
-        "\n1.",
-        net_path,
-    )
+    print()
 
-    print(
-        "2.",
-        uplift_path,
-    )
-
-    print(
-        "3.",
-        loading_path,
-    )
-
-    print(
-        "\nEnergy-balance analysis complete."
-    )
-
-    print(
-        "=" * 70
-    )
+    print("DONE.")
 
 
 # ============================================================
-# 17. SCRIPT ENTRY POINT
+# RUN
 # ============================================================
 
 if __name__ == "__main__":
