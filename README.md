@@ -1,10 +1,4 @@
-Yes. Since you have **now added `05_robustness.py` to the existing repository**, I would update the README rather than restructure the repository or remove your existing reference/data files.
 
-One important correction: your current GitHub repository structure is **not exactly the same** as the old README. You currently have `Scripts/`, `Full Data set .csv`, `Refrences .csv`, and `Substrate mapping .csv` at the repository root. So the README below is written to match that structure rather than claiming files are under `data/` or `src/`.
-
-Copy-paste the following directly into `README.md`:
-
-````markdown
 # Harmonised dark-fermentation biohydrogen dataset and cross-study validation pipeline
 
 Data and code for:
