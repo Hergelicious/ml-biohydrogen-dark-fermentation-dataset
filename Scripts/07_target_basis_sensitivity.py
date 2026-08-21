@@ -19,8 +19,8 @@ If the ordering augmented > row-wise > grouped, and the grouped collapse to the
 mean-predictor level, survive down to T4, the result cannot be an artefact of
 mixing denominators.
 
-Writes results/08_basis_composition.csv
-       results/08_basis_sensitivity.csv
+Writes results/07_basis_composition.csv
+       results/07_basis_sensitivity.csv
 """
 import sys
 import warnings
@@ -236,7 +236,7 @@ def main():
                 r.rf_minus_mean_grouped,
             )
         )
-    print("\nwrote results/08_basis_composition.csv, 08_basis_sensitivity.csv")
+    print("\nwrote results/07_basis_composition.csv, 07_basis_sensitivity.csv")
 
 
 if __name__ == "__main__":
