@@ -1,3 +1,4 @@
+
 # Harmonised Dark-Fermentation Biohydrogen Dataset and Cross-Study Validation Pipeline
 
 Data and code for *"Cross-study generalisation fails in machine-learning models of dark fermentation: quantifying unit heterogeneity, synthetic augmentation and source-level leakage"* (Hassan, Moustafa & Abdelkader).
@@ -13,7 +14,7 @@ Machine-learning models of dark-fermentative hydrogen yield are usually trained 
 The central experiment holds the data, features, encoding, and hyperparameters fixed, varying only how the test set is drawn. It finds:
 
 | Validation protocol | Random Forest | CatBoost |
-| --- | --- | --- |
+|---|---|---|
 | Dataset duplicated with Gaussian noise, then split at random | +0.65 | +0.63 |
 | Original rows split 80/20 at random | +0.44 | +0.44 |
 | **Source studies held out entirely** | **−0.17** | **−0.35** |
@@ -25,25 +26,31 @@ Under study-level holdout, neither ensemble model beats predicting the overall m
 
 ## Repository layout
 
+
 ```
-data/
-  Full_Data_set.csv               the compilation as submitted (261 records, 84 sources)
-  Full_Data_set_AUDITED.csv       + recomputed conversions, quality flags    [generated]
-  dataset_modelling_224.csv       the modelling subset with features attached [generated]
 
-scripts/
-  common.py                       shared configuration, mappings, feature definitions
-  01_audit_dataset.py             recompute every conversion; flag; write modelling set
-  02_validation_ladder.py         the three validation protocols + baselines
-  03_statistics.py                variance components, learning curve, meta-regression
-  04_energy_balance.py            reactor heat balance coupled to the temperature effect
-  05_robustness.py                algorithm comparisons, hyperparameter tuning, sensitivity
-  06_basis_sensitivity.py         sensitivity analysis across unit conventions & groups
-  07_target_basis_sensitivity.py  validation ladder restricted by strict target mass basis
-  08_what_transfers.py            rank transfer, classification, interval coverage & ICC
-
-results/                          all output CSV tables and execution logs    [generated]
-run_all.sh                        runs scripts 01 -> 08 in sequence
+ml-biohydrogen-dark-fermentation-dataset/
+├── data/
+│   ├── Full_Data_set.csv               the compilation as submitted (261 records, 84 sources)
+│   ├── Full_Data_set_AUDITED.csv       + recomputed conversions, quality flags    [generated]
+│   ├── dataset_modelling_224.csv       the modelling subset with features attached [generated]
+│   └── references.csv                  full citation metadata for all 84 source literature studies
+├── scripts/
+│   ├── common.py                       shared configuration, mappings, feature definitions
+│   ├── 01_audit_dataset.py             recompute every conversion; flag; write modelling set
+│   ├── 02_validation_ladder.py         the three validation protocols + baselines
+│   ├── 03_statistics.py                variance components, learning curve, meta-regression
+│   ├── 04_energy_balance.py            reactor heat balance coupled to the temperature effect
+│   ├── 05_robustness.py                algorithm comparisons, hyperparameter tuning, sensitivity
+│   ├── 06_basis_sensitivity.py         sensitivity analysis across unit conventions & groups
+│   ├── 07_target_basis_sensitivity.py  validation ladder restricted by strict target mass basis
+│   └── 08_what_transfers.py            rank transfer, classification, interval coverage & ICC
+├── results/                            all output CSV tables and execution logs    [generated]
+├── LICENSE                             Creative Commons Attribution 4.0 International
+├── LICENSE-CODE                        MIT License for Python source code
+├── README.md                           this documentation file
+├── REFERENCES.md                       formatted bibliography of all 84 source studies
+└── run_all.sh                          runs scripts 01 -> 08 in sequence
 
 ```
 
@@ -56,7 +63,7 @@ run_all.sh                        runs scripts 01 -> 08 in sequence
 Python 3.11 or newer is required.
 
 ```bash
-git clone https://github.com/Hergelicious/ml-biohydrogen-dark-fermentation-dataset.git
+git clone [https://github.com/Hergelicious/ml-biohydrogen-dark-fermentation-dataset.git](https://github.com/Hergelicious/ml-biohydrogen-dark-fermentation-dataset.git)
 cd ml-biohydrogen-dark-fermentation-dataset
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -68,9 +75,9 @@ Runtime is approximately 5–10 minutes. Execution time is dominated by resampli
 
 ---
 
-## The dataset
+## The dataset & references
 
-`data/Full_Data_set.csv` — 261 records from 84 published sources (2002–2025).
+`data/Full_Data_set.csv` — 261 records from 84 published sources (2002–2025). Full citation details, DOI links, and publication metadata for all 84 primary sources are compiled in `data/references.csv` and rendered human-readably in `REFERENCES.md`.
 
 | Column | Contents |
 | --- | --- |
@@ -80,7 +87,7 @@ Runtime is approximately 5–10 minutes. Execution time is dominated by resampli
 | `dm³ H₂/g` | Harmonised yield ($\text{dm}^3\ \text{H}_2\ \text{g}^{-1}$ substrate at STP) |
 | `Conversion Calculation & Notes` | Arithmetic used per record |
 | `Unit Group` | Group A, B, C, or Excluded |
-| `Reference` | Source study (primary grouping variable for cross-validation) |
+| `Reference` | Source study key (primary grouping variable matching `references.csv`) |
 
 Twenty-six distinct unit conventions appear in the source literature. Harmonisation follows four rules:
 
@@ -178,13 +185,13 @@ Based on findings from this pipeline:
 3. **Resampling Distributions**: Report evaluation metrics as distributions across repeated resamples rather than relying on a single train/test split.
 4. **Baseline Comparisons**: Benchmarks must include a grouped mean predictor and linear baseline. Algorithms that cannot outperform a naive mean predictor under grouped holdout provide no predictive power.
 5. **Synthetic Augmentation Restrictions**: Avoid generating synthetic samples via noise addition or row duplication, as this introduces severe data leakage under random splitting.
-6. **Reproducible Pipelines**: Publish full data and code scripts to ensure validation protocols can be independently audited.
+6. **Reproducible Pipelines**: Publish full data, references, and code scripts to ensure validation protocols can be independently audited.
 
 ---
 
 ## License
 
-* **Data**: Creative Commons Attribution 4.0 International (`LICENSE`)
+* **Data & References**: Creative Commons Attribution 4.0 International (`LICENSE`)
 * **Code**: MIT License (`LICENSE-CODE`)
 
 Please cite the associated manuscript when using the dataset or code in academic work (see `CITATION.cff`).
