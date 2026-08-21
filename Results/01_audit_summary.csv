@@ -1,9 +1,0 @@
-type,issue,records
-arithmetic,harmonised value disagrees with the stated conversion by >2%,1
-flag,value duplicates an adjacent record with a factor-1000 unit discrepancy,1
-flag,"yield expressed per volume of slurry, not per mass of volatile solids",16
-flag,observation already present in the file under the primary study,12
-flag,xylose converted on a C6 basis while other xylose records use C5,1
-flag,yield exceeds 4 mol H2 per mol hexose equivalent,8
-flag,exact duplicate of an earlier record in the same source,4
-flag,"pH or temperature parsed from a range, tolerance or text",15
