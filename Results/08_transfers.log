@@ -1,0 +1,31 @@
+n = 224 observations from 82 studies, 40 grouped resamples
+
+A. RANK TRANSFER (Spearman, study-grouped holdout)
+   pooled across the test partition : +0.201 [-0.409, +0.589]
+   within each held-out study       : +0.294 [-0.800, +0.894]  (118 studies with n>=4)
+   within-study rho vs 0: Wilcoxon p = 7.932e-07
+
+B. COARSE CLASSIFICATION INTO YIELD TERTILES
+   model accuracy      : +0.372 [+0.188, +0.564]
+   majority-class rate : +0.206 [+0.124, +0.290]
+   chance rate         : 0.333
+
+C. 90% PREDICTION INTERVALS FROM TREE SPREAD
+   empirical coverage  : +0.697 [+0.499, +0.863]   (nominal 0.90)
+   median width        : 0.282 dm3 H2 g-1 substrate
+   target SD           : 0.147
+
+D. WHY IT FAILS
+   MAE vs |study mean - training mean|: Spearman rho = 0.585 (p = 1.03e-63, n = 680)
+   -> error is driven by how far a held-out study sits from the training centroid.
+
+   Confounding of the predictors themselves with study identity:
+predictor   icc                     kind  share_rows_in_single_study_levels
+      pHn 0.743                  numeric                                NaN
+       Tn 0.723                  numeric                                NaN
+  sub_cat 0.927 categorical (Cramer's V)                              0.112
+ inoc_cat 0.865 categorical (Cramer's V)                              0.040
+react_cat 0.836 categorical (Cramer's V)                              0.098
+
+   Learning-curve slope: -0.00144 R2 per additional training study (95% CI -0.00786 to +0.00553)
+   -> indistinguishable from zero over the range tested (10-65 studies).

@@ -1,0 +1,26 @@
+n = 224 observations from 82 studies
+target: mean 0.1552, SD 0.1469 dm3 H2 g-1
+
+  augmented   Random Forest    R2 +0.652 (+0.472 to +0.749)
+  augmented   CatBoost         R2 +0.633 (+0.474 to +0.758)
+  rowwise     Random Forest    R2 +0.439 (+0.109 to +0.605)
+  rowwise     CatBoost         R2 +0.442 (+0.102 to +0.629)
+  grouped     Random Forest    R2 -0.174 (-0.953 to +0.355)
+  grouped     CatBoost         R2 -0.350 (-1.157 to +0.291)
+  grouped     Ridge (one-hot)  R2 -0.314 (-1.700 to +0.268)
+  grouped     Mean predictor   R2 -0.180 (-1.082 to -0.000)
+
+Grouped-protocol error metrics (median over 40 resamples):
+          model   rmse    mae  target_sd
+       CatBoost 0.1322 0.1099     0.1469
+ Mean predictor 0.1385 0.1175     0.1469
+  Random Forest 0.1238 0.1002     0.1469
+Ridge (one-hot) 0.1369 0.1132     0.1469
+
+grouped test partitions: 47 rows from 17 studies on average
+
+attribution of the inflation (median R2):
+  Random Forest  augmentation +0.21 | row-wise splitting +0.61 | grouped baseline -0.17
+  CatBoost       augmentation +0.19 | row-wise splitting +0.79 | grouped baseline -0.35
+
+wrote results/02_ladder_scores.csv, 02_ladder_summary.csv, 02_error_metrics.csv
