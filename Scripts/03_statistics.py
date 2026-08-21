@@ -1,85 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 """
-03_statistics.py
+03_statistics.py -- the statistical analyses that do not treat rows as independent.
 
-Statistical analyses that account for the non-independence of observations
-within source studies.
+  1. Variance decomposition of harmonised yield into within- and between-study
+     parts (direct method), plus a random-intercept mixed model on log(1+y).
+  2. Learning curve: grouped test R2 against the number of training studies.
+  3. Mixed-effects meta-regression: substrate class, operating mode, temperature
+     and pH as moderators, study as a random intercept.
+  4. Random-effects pooled yield per substrate class, with 95% CIs.
 
-Analyses
---------
+Writes  results/03_variance_components.csv
+        results/03_learning_curve.csv
+        results/03_metaregression.csv
+        results/03_pooled_yields.csv
 
-1. Variance decomposition
-   Decomposes harmonised hydrogen yield into within-study and between-study
-   components using a direct decomposition, and estimates a random-intercept
-   mixed-effects model on log(1 + yield).
-
-2. Learning curve
-   Evaluates grouped test R2 as the number of training studies increases.
-
-3. Mixed-effects meta-regression
-   Estimates the effects of substrate class, operating mode, temperature and
-   pH while accounting for study-level clustering through a random intercept.
-
-4. Random-effects pooled yields
-   Estimates pooled hydrogen yield for each substrate class using a
-   study-level random intercept.
-
-Outputs
--------
-
-results/03_variance_components.csv
-    Within-study variance, between-study variance and ICC.
-
-results/03_learning_curve.csv
-    Grouped test R2 across different numbers of training studies.
-
-results/03_metaregression.csv
-    Mixed-effects meta-regression coefficients, standard errors, p-values
-    and 95% confidence intervals.
-
-results/03_temperature_effect.csv
-    Model-implied yield difference between mesophilic and thermophilic
-    reference temperatures.
-
-results/03_pooled_yields.csv
-    Random-effects pooled yield estimates by substrate class.
-
-Repository structure
---------------------
-
-    repo/
-    ├── data/
-    ├── src/
-    │   ├── common.py
-    │   ├── 01_audit_dataset.py
-    │   ├── 02_validation_ladder.py
-    │   ├── 03_statistics.py
-    │   └── 04_energy_balance.py
-    └── results/
-
-Run from the repository with:
-
-    python src/03_statistics.py
-
-The script contains no user-specific absolute paths and is therefore
-portable across systems.
+Note on the log(1+y) scale: yields are non-negative and include exact zeros, and
+the raw distribution is strongly right-skewed.  Because yields are small
+(median 0.11), log(1+y) is close to linear in y over the observed range, so
+coefficients read approximately as dm3 H2 g-1 per unit of moderator.  Pooled
+means are back-transformed with expm1.
 """
-
-
-# ============================================================
-# 1. IMPORTS
-# ============================================================
-
-from pathlib import Path
 import sys
 import warnings
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
-
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
@@ -87,969 +34,297 @@ from sklearn.metrics import r2_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-
-# ============================================================
-# 2. PROJECT PATHS
-# ============================================================
-
-# This script is stored in:
-#
-#     repo/src/03_statistics.py
-#
-# Therefore:
-#
-#     SRC_DIR = repo/src
-#     ROOT    = repo
-
-SRC_DIR = Path(__file__).resolve().parent
-ROOT = SRC_DIR.parent
-
-DATA_DIR = ROOT / "data"
-RESULTS_DIR = ROOT / "results"
-
-
-# ============================================================
-# 3. VERIFY PROJECT STRUCTURE
-# ============================================================
-
-print("=" * 70)
-print("STATISTICAL ANALYSES")
-print("=" * 70)
-
-print("\nRepository:")
-print(ROOT)
-
-if not ROOT.exists():
-    raise FileNotFoundError(
-        f"\nRepository directory was not found:\n{ROOT}"
-    )
-
-if not DATA_DIR.exists():
-    raise FileNotFoundError(
-        f"\ndata/ directory was not found:\n{DATA_DIR}"
-    )
-
-if not (SRC_DIR / "common.py").exists():
-    raise FileNotFoundError(
-        f"\ncommon.py was not found at:\n{SRC_DIR / 'common.py'}"
-    )
-
-RESULTS_DIR.mkdir(
-    parents=True,
-    exist_ok=True,
-)
-
-print("\nProject structure verified.")
-
-
-# ============================================================
-# 4. IMPORT SHARED DEFINITIONS
-# ============================================================
-
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(
-        0,
-        str(SRC_DIR),
-    )
-
+# Ensure common.py can be imported from the current script directory
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import (
     CAT_FEATURES,
+    NATIVE_VS,
     NUM_FEATURES,
     N_LC_REPEATS,
     RESULTS,
     SEED,
     TARGET,
+    add_basis,
     design_matrix,
     load_modelling_data,
+    resolve_numeric_columns,
     variance_components,
 )
 
+warnings.filterwarnings("ignore")
 
-# ============================================================
-# 5. ANALYSIS SETTINGS
-# ============================================================
-
-warnings.filterwarnings(
-    "ignore"
-)
-
-REFERENCE_SUBSTRATE = (
-    "Food/kitchen waste"
-)
-
+REFERENCE_SUBSTRATE = "Food/kitchen waste"
 MIN_STUDIES_FOR_POOLING = 3
-
 LC_HOLDOUT_STUDIES = 16
+LC_GRID = [10, 20, 30, 40, 50, 60, 65]
+T_MESO, T_THERMO = 37.0, 55.0  # mesophilic / thermophilic reference points
 
-LC_GRID = [
-    10,
-    20,
-    30,
-    40,
-    50,
-    60,
-    65,
-]
-
-T_MESO = 37.0
-T_THERMO = 55.0
-
-
-# ============================================================
-# 6. BASELINE YIELD
-# ============================================================
 
 def baseline_yield(d):
+    """Baseline used to back-transform the temperature coefficient.
+
+    The median of the modelling set is used rather than any fitted category mean,
+    so the reported temperature effect does not depend on which substrate class
+    happens to be the regression reference.
     """
-    Return the median harmonised yield of the modelling dataset.
+    return float(d[TARGET].median())
 
-    The modelling-set median is used as the reference yield when translating
-    the temperature coefficient from the log1p scale back to the original
-    hydrogen-yield scale.
-
-    This avoids making the temperature-effect estimate dependent on the
-    arbitrary choice of regression reference category.
-    """
-
-    return float(
-        d[TARGET].median()
-    )
-
-
-# ============================================================
-# 7. RANDOM FOREST MODEL
-# ============================================================
 
 def rf():
-    """
-    Construct the Random Forest pipeline.
-
-    Categorical variables are one-hot encoded and numerical variables are
-    median-imputed. The preprocessing is fitted within each model fit.
-    """
-
     return make_pipeline(
         ColumnTransformer(
             [
-                (
-                    "cat",
-                    OneHotEncoder(
-                        handle_unknown="ignore"
-                    ),
-                    CAT_FEATURES,
-                ),
-                (
-                    "num",
-                    SimpleImputer(
-                        strategy="median"
-                    ),
-                    NUM_FEATURES,
-                ),
+                ("cat", OneHotEncoder(handle_unknown="ignore"), CAT_FEATURES),
+                ("num", SimpleImputer(strategy="median"), NUM_FEATURES),
             ]
         ),
-        RandomForestRegressor(
-            n_estimators=400,
-            random_state=SEED,
-            n_jobs=-1,
-        ),
+        RandomForestRegressor(n_estimators=400, random_state=SEED, n_jobs=-1),
     )
 
 
-# ============================================================
-# 8. RANDOM-INTERCEPT MIXED MODEL
-# ============================================================
+def mixed_intercept(frame, group_col="ref", response="ly"):
+    """Random-intercept model; groups passed as an array to avoid index alignment."""
+    f = frame.reset_index(drop=True)
+    return smf.mixedlm("%s ~ 1" % response, f, groups=f[group_col].values).fit(reml=True)
 
-def mixed_intercept(
-    frame,
-    group_col="ref",
-    response="ly",
-):
+
+def temperature_effect(frame, label, tag):
+    """Fit the meta-regression on `frame` and back-transform the temperature
+    coefficient at that frame's own median yield. Written to its own CSV so
+    downstream scripts can pick the dimensionally appropriate estimate.
     """
-    Fit a random-intercept mixed-effects model.
-
-    The grouping variable is passed as an array after resetting the dataframe
-    index to avoid index-alignment problems in statsmodels.
-    """
-
-    frame = (
-        frame
-        .reset_index(drop=True)
-    )
-
-    return smf.mixedlm(
-        f"{response} ~ 1",
-        frame,
-        groups=frame[group_col].values,
-    ).fit(
-        reml=True
-    )
-
-
-# ============================================================
-# 9. LOAD MODELLING DATA
-# ============================================================
-
-print("\n" + "=" * 70)
-print("LOADING MODELLING DATA")
-print("=" * 70)
-
-d = load_modelling_data()
-
-d = d.assign(
-    ly=np.log1p(
-        d[TARGET]
-    )
-)
-
-X, y, groups = design_matrix(
-    d
-)
-
-print(
-    "\nObservations:",
-    len(d),
-)
-
-print(
-    "Source studies:",
-    d.ref.nunique(),
-)
-
-print(
-    "Target median:",
-    f"{d[TARGET].median():.4f}",
-)
-
-print(
-    "Target mean:",
-    f"{d[TARGET].mean():.4f}",
-)
-
-
-# ============================================================
-# 10. VARIANCE COMPONENTS
-# ============================================================
-
-print("\n" + "=" * 70)
-print("1. VARIANCE COMPONENTS")
-print("=" * 70)
-
-within, between, icc = variance_components(
-    d
-)
-
-m0 = mixed_intercept(
-    d
-)
-
-tau2 = float(
-    m0.cov_re.iloc[0, 0]
-)
-
-sigma2 = float(
-    m0.scale
-)
-
-icc_mixed = (
-    tau2
-    /
-    (tau2 + sigma2)
-)
-
-vc = pd.DataFrame(
-    [
-        {
-            "method":
-                "direct decomposition (raw yield)",
-            "within":
-                within,
-            "between":
-                between,
-            "icc":
-                icc,
-        },
-        {
-            "method":
-                "random-intercept mixed model (log1p yield)",
-            "within":
-                sigma2,
-            "between":
-                tau2,
-            "icc":
-                icc_mixed,
-        },
+    dd = frame.dropna(subset=["Tn", "pHn", "sub_cat", "mode", "ref"]).reset_index(drop=True)
+    terms = [
+        'C(sub_cat, Treatment(reference="%s"))' % REFERENCE_SUBSTRATE
+        if dd.sub_cat.nunique() > 1 and (dd.sub_cat == REFERENCE_SUBSTRATE).any()
+        else None,
+        "C(mode)" if dd["mode"].nunique() > 1 else None,
+        "Tn",
+        "pHn",
     ]
-)
+    formula = "ly ~ " + " + ".join(t for t in terms if t)
+    m = smf.mixedlm(formula, dd, groups=dd["ref"].values).fit(reml=True)
+    b, se, p = float(m.params["Tn"]), float(m.bse["Tn"]), float(m.pvalues["Tn"])
+    y0 = float(dd[TARGET].median())
+    span = T_THERMO - T_MESO
 
-variance_path = (
-    RESULTS_DIR
-    /
-    "03_variance_components.csv"
-)
+    def imp(beta):
+        return float(np.expm1(np.log1p(y0) + beta * span) - y0)
 
-vc.to_csv(
-    variance_path,
-    index=False,
-)
-
-print(
-    vc.round(5)
-    .to_string(
-        index=False
+    row = dict(
+        subset=label,
+        n=len(dd),
+        studies=dd.ref.nunique(),
+        formula=formula,
+        baseline_yield=y0,
+        span_C=span,
+        coef=b,
+        se=se,
+        p=p,
+        ci_lo=b - 1.96 * se,
+        ci_hi=b + 1.96 * se,
+        implied_difference=imp(b),
+        implied_lo=imp(b - 1.96 * se),
+        implied_hi=imp(b + 1.96 * se),
+        significant=bool(p < 0.05),
     )
-)
-
-print(
-    "\nBetween-study variance accounts for "
-    "%.1f%% of the raw-yield variance."
-    % (
-        100 * icc
+    pd.DataFrame([row]).to_csv(RESULTS / ("03_temperature_effect%s.csv" % tag), index=False)
+    print(
+        "   %-28s n=%3d (%2d studies)  beta=%+.5f  p=%.4f  ->  dY %+.4f [%+.4f, %+.4f]%s"
+        % (
+            label,
+            row["n"],
+            row["studies"],
+            b,
+            p,
+            row["implied_difference"],
+            row["implied_lo"],
+            row["implied_hi"],
+            "" if row["significant"] else "   NOT SIGNIFICANT",
+        )
     )
-)
-
-print(
-    "This is the component that study-level holdout "
-    "validation is designed to remove."
-)
+    return row
 
 
-# ============================================================
-# 11. LEARNING CURVE
-# ============================================================
+def main():
+    d = resolve_numeric_columns(load_modelling_data())
+    d = add_basis(d) if "Original Unit" in d.columns else d.assign(basis="unknown")
+    d = d.assign(ly=np.log1p(d.y))
+    X, y, groups = design_matrix(d)
+    print("n = %d observations from %d studies\n" % (len(d), d.ref.nunique()))
 
-print("\n" + "=" * 70)
-print("2. LEARNING CURVE")
-print("=" * 70)
-
-studies = np.array(
-    sorted(
-        d.ref.unique()
-    )
-)
-
-rng = np.random.default_rng(
-    0
-)
-
-lc_rows = []
-
-for k in LC_GRID:
-
-    for rep in range(
-        N_LC_REPEATS
-    ):
-
-        perm = rng.permutation(
-            studies
-        )
-
-        held = set(
-            perm[
-                :LC_HOLDOUT_STUDIES
-            ]
-        )
-
-        pool = list(
-            perm[
-                LC_HOLDOUT_STUDIES:
-                LC_HOLDOUT_STUDIES + k
-            ]
-        )
-
-        train_mask = np.isin(
-            groups,
-            pool,
-        )
-
-        test_mask = np.isin(
-            groups,
-            list(held),
-        )
-
-        if (
-            train_mask.sum() < 20
-            or test_mask.sum() < 8
-        ):
-            continue
-
-        model = rf().fit(
-            X[train_mask],
-            y[train_mask],
-        )
-
-        prediction = model.predict(
-            X[test_mask]
-        )
-
-        lc_rows.append(
-            {
-                "train_studies":
-                    k,
-                "repeat":
-                    rep,
-                "n_train":
-                    int(
-                        train_mask.sum()
-                    ),
-                "n_test":
-                    int(
-                        test_mask.sum()
-                    ),
-                "r2":
-                    r2_score(
-                        y[test_mask],
-                        prediction,
-                    ),
-            }
-        )
-
-lc = pd.DataFrame(
-    lc_rows
-)
-
-learning_curve_path = (
-    RESULTS_DIR
-    /
-    "03_learning_curve.csv"
-)
-
-lc.to_csv(
-    learning_curve_path,
-    index=False,
-)
-
-print(
-    "\nGrouped holdout of %d studies."
-    % LC_HOLDOUT_STUDIES
-)
-
-print(
-    lc.groupby(
-        "train_studies"
-    )
-    .r2
-    .agg(
+    # ---- 1. variance components -------------------------------------------
+    within, between, icc = variance_components(d)
+    m0 = mixed_intercept(d)
+    tau2 = float(m0.cov_re.iloc[0, 0])
+    sigma2 = float(m0.scale)
+    icc_mixed = tau2 / (tau2 + sigma2)
+    vc = pd.DataFrame(
         [
-            "median",
-            "size",
+            dict(
+                method="direct decomposition (raw yield)",
+                within=within,
+                between=between,
+                icc=icc,
+            ),
+            dict(
+                method="random-intercept mixed model (log1p yield)",
+                within=sigma2,
+                between=tau2,
+                icc=icc_mixed,
+            ),
         ]
     )
-    .round(3)
-    .to_string()
-)
-
-
-# ============================================================
-# 12. MIXED-EFFECTS META-REGRESSION
-# ============================================================
-
-print("\n" + "=" * 70)
-print("3. MIXED-EFFECTS META-REGRESSION")
-print("=" * 70)
-
-md = (
-    d
-    .dropna(
-        subset=[
-            "Tn",
-            "pHn",
-            "sub_cat",
-            "mode",
-            "ref",
-        ]
+    vc.to_csv(RESULTS / "03_variance_components.csv", index=False)
+    print("VARIANCE COMPONENTS")
+    print(vc.round(5).to_string(index=False))
+    print(
+        "  -> %.0f%% of the variance in harmonised yield lies BETWEEN studies,"
+        % (100 * icc)
     )
-    .reset_index(
-        drop=True
+    print("     which is exactly the component a study-level holdout removes.\n")
+
+    # ---- 2. learning curve -------------------------------------------------
+    studies = np.array(sorted(d.ref.unique()))
+    rng = np.random.default_rng(0)
+    lc_rows = []
+    for k in LC_GRID:
+        for rep in range(N_LC_REPEATS):
+            perm = rng.permutation(studies)
+            held = set(perm[:LC_HOLDOUT_STUDIES])
+            pool = list(perm[LC_HOLDOUT_STUDIES : LC_HOLDOUT_STUDIES + k])
+            tr = np.isin(groups, pool)
+            te = np.isin(groups, list(held))
+            if tr.sum() < 20 or te.sum() < 8:
+                continue
+            m = rf().fit(X[tr], y[tr])
+            lc_rows.append(
+                dict(
+                    train_studies=k,
+                    repeat=rep,
+                    n_train=int(tr.sum()),
+                    n_test=int(te.sum()),
+                    r2=r2_score(y[te], m.predict(X[te])),
+                )
+            )
+    lc = pd.DataFrame(lc_rows)
+    lc.to_csv(RESULTS / "03_learning_curve.csv", index=False)
+    print("LEARNING CURVE (grouped holdout of %d studies)" % LC_HOLDOUT_STUDIES)
+    print(lc.groupby("train_studies").r2.agg(["median", "size"]).round(3).to_string())
+    print("  -> no systematic improvement across the range tested.\n")
+
+    # ---- 3. meta-regression ------------------------------------------------
+    md = d.dropna(subset=["Tn", "pHn", "sub_cat", "mode", "ref"]).reset_index(drop=True)
+    formula = (
+        'ly ~ C(sub_cat, Treatment(reference="%s")) + C(mode) + Tn + pHn'
+        % REFERENCE_SUBSTRATE
     )
-)
-
-formula = (
-    'ly ~ C(sub_cat, '
-    'Treatment(reference="%s")) + '
-    'C(mode) + Tn + pHn'
-    % REFERENCE_SUBSTRATE
-)
-
-mm = smf.mixedlm(
-    formula,
-    md,
-    groups=md["ref"].values,
-).fit(
-    reml=True
-)
-
-res = pd.DataFrame(
-    {
-        "term":
-            mm.params.index,
-        "coef":
-            mm.params.values,
-        "se":
-            mm.bse.values,
-        "p":
-            mm.pvalues.values,
-    }
-)
-
-res["term"] = (
-    res["term"]
-    .str.replace(
-        'C(sub_cat, Treatment(reference="%s"))[T.'
-        % REFERENCE_SUBSTRATE,
-        "substrate: ",
-        regex=False,
-    )
-    .str.replace(
-        "C(mode)[T.",
-        "mode: ",
-        regex=False,
-    )
-    .str.replace(
-        "]",
-        "",
-        regex=False,
-    )
-)
-
-res["ci_lo"] = (
-    res["coef"]
-    -
-    1.96 * res["se"]
-)
-
-res["ci_hi"] = (
-    res["coef"]
-    +
-    1.96 * res["se"]
-)
-
-meta_path = (
-    RESULTS_DIR
-    /
-    "03_metaregression.csv"
-)
-
-res.to_csv(
-    meta_path,
-    index=False,
-)
-
-print(
-    "\nFormula:"
-)
-
-print(
-    formula
-)
-
-print(
-    "\nObservations:",
-    len(md),
-)
-
-print(
-    "\nMeta-regression results:"
-)
-
-print(
-    res.round(4)
-    .to_string(
-        index=False
-    )
-)
-
-
-# ============================================================
-# 13. TEMPERATURE EFFECT
-# ============================================================
-
-temperature_row = (
-    res[
-        res.term == "Tn"
-    ]
-)
-
-if temperature_row.empty:
-    raise RuntimeError(
-        "Temperature coefficient (Tn) was not found "
-        "in the meta-regression results."
-    )
-
-t = temperature_row.iloc[0]
-
-y0 = baseline_yield(
-    d
-)
-
-span = (
-    T_THERMO
-    -
-    T_MESO
-)
-
-
-def implied_difference(
-    beta
-):
-    """
-    Back-transform a temperature coefficient from the log1p scale.
-
-    The coefficient is evaluated over the mesophilic-to-thermophilic
-    temperature interval at the median modelling-set yield.
-    """
-
-    return float(
-        np.expm1(
-            np.log1p(y0)
-            +
-            beta * span
-        )
-        -
-        y0
-    )
-
-
-dy = implied_difference(
-    t.coef
-)
-
-dy_lo = implied_difference(
-    t.ci_lo
-)
-
-dy_hi = implied_difference(
-    t.ci_hi
-)
-
-temperature_effect = pd.DataFrame(
-    [
+    mm = smf.mixedlm(formula, md, groups=md["ref"].values).fit(reml=True)
+    res = pd.DataFrame(
         {
-            "baseline_yield":
-                y0,
-            "span_C":
-                span,
-            "coef":
-                t.coef,
-            "implied_difference":
-                dy,
-            "ci_lo":
-                dy_lo,
-            "ci_hi":
-                dy_hi,
-        }
-    ]
-)
-
-temperature_path = (
-    RESULTS_DIR
-    /
-    "03_temperature_effect.csv"
-)
-
-temperature_effect.to_csv(
-    temperature_path,
-    index=False,
-)
-
-print(
-    "\nTemperature coefficient:"
-)
-
-print(
-    "  %+.5f per °C on the log1p scale"
-    % t.coef
-)
-
-print(
-    "  95%% CI: %.5f to %.5f"
-    % (
-        t.ci_lo,
-        t.ci_hi,
-    )
-)
-
-print(
-    "  p = %.4f"
-    % t.p
-)
-
-print(
-    "\nModel-implied yield difference:"
-)
-
-print(
-    "  %.0f -> %.0f °C at median yield %.4f:"
-    % (
-        T_MESO,
-        T_THERMO,
-        y0,
-    )
-)
-
-print(
-    "  %+.3f dm3 H2 g-1 VS"
-    " (95%% CI %+.3f to %+.3f)"
-    % (
-        dy,
-        dy_lo,
-        dy_hi,
-    )
-)
-
-
-# ============================================================
-# 14. pH EFFECT
-# ============================================================
-
-pH_row = (
-    res[
-        res.term == "pHn"
-    ]
-)
-
-if not pH_row.empty:
-
-    ph = pH_row.iloc[0]
-
-    print(
-        "\nEstimated pH effect:"
-    )
-
-    print(
-        "  %+.4f per pH unit"
-        % ph.coef
-    )
-
-    print(
-        "  p = %.4f"
-        % ph.p
-    )
-
-
-# ============================================================
-# 15. RANDOM-EFFECTS POOLED YIELDS
-# ============================================================
-
-print("\n" + "=" * 70)
-print("4. POOLED YIELD BY SUBSTRATE CLASS")
-print("=" * 70)
-
-pooled_rows = []
-
-for category, group_data in d.groupby(
-    "sub_cat"
-):
-
-    n_studies = (
-        group_data.ref.nunique()
-    )
-
-    if (
-        n_studies
-        <
-        MIN_STUDIES_FOR_POOLING
-    ):
-
-        pooled_rows.append(
-            {
-                "substrate":
-                    category,
-                "rows":
-                    len(group_data),
-                "studies":
-                    n_studies,
-                "pooled":
-                    np.nan,
-                "ci_lo":
-                    np.nan,
-                "ci_hi":
-                    np.nan,
-            }
-        )
-
-        continue
-
-    model = mixed_intercept(
-        group_data
-    )
-
-    beta = float(
-        model.params.iloc[0]
-    )
-
-    se = float(
-        model.bse.iloc[0]
-    )
-
-    pooled_rows.append(
-        {
-            "substrate":
-                category,
-            "rows":
-                len(group_data),
-            "studies":
-                n_studies,
-            "pooled":
-                np.expm1(
-                    beta
-                ),
-            "ci_lo":
-                np.expm1(
-                    beta
-                    -
-                    1.96 * se
-                ),
-            "ci_hi":
-                np.expm1(
-                    beta
-                    +
-                    1.96 * se
-                ),
+            "term": mm.params.index,
+            "coef": mm.params.values,
+            "se": mm.bse.values,
+            "p": mm.pvalues.values,
         }
     )
-
-pooled = (
-    pd.DataFrame(
-        pooled_rows
+    res["term"] = (
+        res.term.str.replace(
+            'C(sub_cat, Treatment(reference="%s"))[T.' % REFERENCE_SUBSTRATE,
+            "substrate: ",
+            regex=False,
+        )
+        .str.replace("C(mode)[T.", "mode: ", regex=False)
+        .str.replace("]", "", regex=False)
     )
-    .sort_values(
-        "pooled",
-        ascending=False,
-        na_position="last",
+    res["ci_lo"] = res.coef - 1.96 * res.se
+    res["ci_hi"] = res.coef + 1.96 * res.se
+    res.to_csv(RESULTS / "03_metaregression.csv", index=False)
+    print("META-REGRESSION  (%s, n = %d)" % (formula, len(md)))
+    print(res.round(4).to_string(index=False))
+    t = res[res.term == "Tn"].iloc[0]
+    print(
+        "  -> temperature %+.5f (log1p scale) per degC (95%% CI %.5f to %.5f, p = %.4f)"
+        % (t.coef, t.ci_lo, t.ci_hi, t.p)
     )
-)
 
-pooled_path = (
-    RESULTS_DIR
-    /
-    "03_pooled_yields.csv"
-)
-
-pooled.to_csv(
-    pooled_path,
-    index=False,
-)
-
-print(
-    pooled.round(4)
-    .to_string(
-        index=False
+    # Model-implied yield difference between mesophilic and thermophilic operation.
+    # The model is fitted on log(1+y), so the coefficient must be back-transformed
+    # at a stated baseline rather than read off linearly.
+    print("\n   TEMPERATURE EFFECT BY TARGET BASIS")
+    print("   (back-transformed at each subset's own median yield, 37 -> 55 degC)")
+    full = temperature_effect(d, "full, mixed basis (per g substrate)", "")
+    vs = temperature_effect(d[d.basis == NATIVE_VS], "native VS only (per g VS)", "_vs")
+    pd.DataFrame([full, vs]).to_csv(RESULTS / "03_temperature_effect_both.csv", index=False)
+    if not vs["significant"]:
+        print("   NOTE: on the dimensionally consistent VS subset the temperature term is")
+        print(
+            "         not significant. The point estimates agree (%+.3f vs %+.3f) but the"
+            % (full["implied_difference"], vs["implied_difference"])
+        )
+        print(
+            "         VS subset has %d records from %d studies and cannot exclude zero."
+            % (vs["n"], vs["studies"])
+        )
+    ph = res[res.term == "pHn"].iloc[0]
+    print(
+        "  -> pH %+.4f (p = %.2f): no detectable effect once study is accounted for\n"
+        % (ph.coef, ph.p)
     )
-)
 
-print(
-    "\nCategories supported by fewer than %d studies "
-    "are not pooled."
-    % MIN_STUDIES_FOR_POOLING
-)
+    # ---- 4. pooled yields --------------------------------------------------
+    rows = []
+    for cat, gd in d.groupby("sub_cat"):
+        n_studies = gd.ref.nunique()
+        if n_studies < MIN_STUDIES_FOR_POOLING:
+            rows.append(
+                dict(
+                    substrate=cat,
+                    rows=len(gd),
+                    studies=n_studies,
+                    pooled=np.nan,
+                    ci_lo=np.nan,
+                    ci_hi=np.nan,
+                )
+            )
+            continue
+        m = mixed_intercept(gd)
+        b, se = float(m.params.iloc[0]), float(m.bse.iloc[0])
+        rows.append(
+            dict(
+                substrate=cat,
+                rows=len(gd),
+                studies=n_studies,
+                pooled=np.expm1(b),
+                ci_lo=np.expm1(b - 1.96 * se),
+                ci_hi=np.expm1(b + 1.96 * se),
+            )
+        )
+    pooled = pd.DataFrame(rows).sort_values("pooled", ascending=False)
+    pooled.to_csv(RESULTS / "03_pooled_yields.csv", index=False)
+    print("POOLED YIELD BY SUBSTRATE CLASS (random effects, study-weighted)")
+    print(pooled.round(4).to_string(index=False))
+    print(
+        "  (categories supported by fewer than %d studies are not pooled)"
+        % MIN_STUDIES_FOR_POOLING
+    )
 
-
-# ============================================================
-# 16. STUDY CONCENTRATION
-# ============================================================
-
-study_counts = (
-    d.ref.value_counts()
-)
-
-n_single_observation_studies = int(
-    (
-        study_counts == 1
-    ).sum()
-)
-
-six_largest_rows = int(
-    study_counts
-    .head(6)
-    .sum()
-)
-
-six_largest_fraction = (
-    100
-    *
-    six_largest_rows
-    /
-    len(d)
-)
-
-print(
-    "\n" + "=" * 70
-)
-
-print(
-    "STUDY CONCENTRATION"
-)
-
-print(
-    "=" * 70
-)
-
-print(
-    "\nNumber of studies:",
-    len(study_counts),
-)
-
-print(
-    "Studies contributing one observation:",
-    n_single_observation_studies,
-)
-
-print(
-    "Rows contributed by six largest studies:",
-    six_largest_rows,
-)
-
-print(
-    "Share of all observations:",
-    f"{six_largest_fraction:.1f}%",
-)
+    vcounts = d.ref.value_counts()
+    print(
+        "\nSTUDY CONCENTRATION: %d studies; %d contribute one observation; "
+        "the six largest contribute %d rows (%.0f%%)"
+        % (
+            len(vcounts),
+            int((vcounts == 1).sum()),
+            int(vcounts.head(6).sum()),
+            100 * vcounts.head(6).sum() / len(d),
+        )
+    )
+    print(
+        "\nwrote results/03_variance_components.csv, 03_learning_curve.csv, "
+        "03_metaregression.csv, 03_pooled_yields.csv"
+    )
 
 
-# ============================================================
-# 17. FINAL OUTPUT FILES
-# ============================================================
-
-print(
-    "\n" + "=" * 70
-)
-
-print(
-    "FILES WRITTEN"
-)
-
-print(
-    "=" * 70
-)
-
-print(
-    "\n1.",
-    variance_path,
-)
-
-print(
-    "2.",
-    learning_curve_path,
-)
-
-print(
-    "3.",
-    meta_path,
-)
-
-print(
-    "4.",
-    temperature_path,
-)
-
-print(
-    "5.",
-    pooled_path,
-)
-
-print(
-    "\nStatistical analyses complete."
-)
-
-print(
-    "=" * 70
-)
+if __name__ == "__main__":
+    main()
