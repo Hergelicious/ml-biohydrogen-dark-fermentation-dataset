@@ -17,7 +17,7 @@ ladder on progressively stricter subsets:
 If the row-wise / grouped gap persists at B3, the collapse cannot be attributed
 to heterogeneity of the target denominator.
 
-Writes results/08_basis_composition.csv and results/08_basis_ladder.csv
+Writes results/08_basis_composition.csv and results/06_basis_ladder.csv
 """
 import sys
 import warnings
@@ -250,7 +250,7 @@ def main():
                 rw - gp,
             )
         )
-    print("\nwrote results/08_basis_composition.csv, 08_basis_ladder.csv")
+    print("\nwrote results/06_basis_composition.csv, 06_basis_ladder.csv")
 
 
 if __name__ == "__main__":
