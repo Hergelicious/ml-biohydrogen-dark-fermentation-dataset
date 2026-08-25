@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this dataset or pipeline, please cite the associated article."
+title: "Harmonised dark-fermentation biohydrogen dataset and cross-study validation pipeline"
+authors:
+  - family-names: Hassan
+    given-names: Hagar H.
+    affiliation: "Department of Sanitary Engineering, Faculty of Engineering, Alexandria University"
+  - family-names: Moustafa
+    given-names: Medhat
+    affiliation: "Department of Sanitary Engineering, Faculty of Engineering, Alexandria University"
+  - family-names: Abdelkader
+    given-names: Amr M.
+    affiliation: "Department of Sanitary Engineering, Faculty of Engineering, Alexandria University"
+license: CC-BY-4.0
+repository-code: "https://github.com/Hergelicious/ml-biohydrogen-dark-fermentation-dataset"
+keywords:
+  - dark fermentation
+  - biohydrogen
+  - wastewater treatment
+  - resource recovery
+  - grouped cross-validation
+  - data leakage
+preferred-citation:
+  type: article
+  title: "Between-study variance limits machine-learning prediction of biohydrogen yield from organic wastes"
+  authors:
+    - family-names: Hassan
+      given-names: Hagar H.
+    - family-names: Moustafa
+      given-names: Medhat
+    - family-names: Abdelkader
+      given-names: Amr M.
+  year: 2026
