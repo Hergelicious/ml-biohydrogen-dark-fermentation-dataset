@@ -1,0 +1,48 @@
+quantity,source_in_paper,claimed,tolerance_type,tolerance,output_file,column,row_filter,likely_cause_if_mismatch
+records in compilation,Section 2.1,261,exact,0,01_audit_summary.csv,value,metric == 'records in compilation',Wrong input CSV
+sources in compilation,Section 2.1,84,exact,0,01_audit_summary.csv,value,metric == 'sources in compilation',Reference column parsed differently
+convertible records agreeing,Section 2.1,256,exact,0,01_audit_summary.csv,value,metric == 'convertible records agreeing',Conversion arithmetic or 2% tolerance differs
+modelled observations,Section 2.1,224,exact,0,01_audit_summary.csv,value,metric == 'modelled observations',Quality-flag logic differs
+modelled studies,Section 2.1,82,exact,0,01_audit_summary.csv,value,metric == 'modelled studies',Grouping column differs
+flag_arithmetic,Table S4,1,exact,0,01_audit_summary.csv,value,metric == 'flag_arithmetic',Tolerance threshold differs
+flag_unit_suspect,Table S4,1,exact,0,01_audit_summary.csv,value,metric == 'flag_unit_suspect',Factor-1000 detection rule differs
+flag_per_slurry,Table S4,16,exact,0,01_audit_summary.csv,value,metric == 'flag_per_slurry',Unit-string matching differs
+flag_review_duplicate,Table S4,12,exact,0,01_audit_summary.csv,value,metric == 'flag_review_duplicate',Source Type column absent or coded differently
+flag_mw_basis,Table S4,1,exact,0,01_audit_summary.csv,value,metric == 'flag_mw_basis',MW Basis Note column absent
+flag_above_thauer,Table S4,8,exact,0,01_audit_summary.csv,value,metric == 'flag_above_thauer',Thauer limit computed on a different basis
+flag_exact_duplicate,Table S4,4,exact,0,01_audit_summary.csv,value,metric == 'flag_exact_duplicate',Duplicate key definition differs
+target SD,Section 3.1,0.147,abs,0.002,02_error_metrics.csv,target_sd,model == 'RandomForest',Modelling set composition differs
+RF noise-augmented random,Table 1,0.652,resample,0.06,02_ladder_summary.csv,median,ladder == 'noise_augmented_random' and model == 'RandomForest',Augmentation noise SD or seeds differ
+RF row-wise,Table 1,0.439,resample,0.06,02_ladder_summary.csv,median,ladder == 'row_wise' and model == 'RandomForest',Seeds or n_estimators differ
+RF study-grouped,Table 1,-0.174,resample,0.06,02_ladder_summary.csv,median,ladder == 'study_grouped' and model == 'RandomForest',Seeds or category mapping differ
+CatBoost study-grouped,Table 1,-0.350,resample,0.08,02_ladder_summary.csv,median,ladder == 'study_grouped' and model == 'CatBoost',CatBoost defaults differ between versions
+Ridge study-grouped,Table 1,-0.314,resample,0.06,02_ladder_summary.csv,median,ladder == 'study_grouped' and model == 'Ridge',Alpha or encoding differs
+mean predictor study-grouped,Table 1,-0.180,resample,0.05,02_ladder_summary.csv,median,ladder == 'study_grouped' and model == 'MeanPredictor',Split seeds differ
+RF grouped RMSE,Table S13,0.124,abs,0.008,02_error_metrics.csv,rmse_median,model == 'RandomForest',Follows from the grouped R2 difference
+raw-yield ICC,Section 3.2,0.708,abs,0.01,03_variance_components.csv,icc,method.str.contains('direct'),Modelling set composition differs
+mixed-model ICC,Section 3.2,0.568,abs,0.02,03_variance_components.csv,icc,method.str.contains('mixed'),REML convergence or transform differs
+mixed-basis beta per C,Table S16,0.00184,abs,0.0002,03_temperature_effect.csv,beta_per_C,subset == 'mixed basis',Complete-case set or mode coding differs
+mixed-basis p,Table S16,0.0083,abs,0.004,03_temperature_effect.csv,p_value,subset == 'mixed basis',Complete-case set differs
+mixed-basis n,Table S16,195,exact,0,03_temperature_effect.csv,n_records,subset == 'mixed basis',Missing-metadata handling differs
+mixed-basis studies,Table S16,75,exact,0,03_temperature_effect.csv,n_studies,subset == 'mixed basis',Missing-metadata handling differs
+native-VS beta per C,Section 3.4,0.00137,abs,0.0003,03_temperature_effect.csv,beta_per_C,subset == 'native volatile solids',Native-VS subset definition differs
+native-VS p,Section 3.4,0.2969,abs,0.05,03_temperature_effect.csv,p_value,subset == 'native volatile solids',Native-VS subset definition differs
+native-VS n,Section 3.4,84,exact,0,03_temperature_effect.csv,n_records,subset == 'native volatile solids',Unit-string filter for 'VS' differs
+native-VS studies,Section 3.4,36,exact,0,03_temperature_effect.csv,n_studies,subset == 'native volatile solids',Unit-string filter for 'VS' differs
+native-VS delta Y,Section 3.4,0.027,abs,0.004,03_temperature_effect.csv,delta_y_point,subset == 'native volatile solids',Baseline median yield differs
+native-VS delta Y lower CI,Section 3.4,-0.023,abs,0.006,03_temperature_effect.csv,delta_y_lo,subset == 'native volatile solids',Follows from beta and SE
+native-VS delta Y upper CI,Section 3.4,0.079,abs,0.006,03_temperature_effect.csv,delta_y_hi,subset == 'native volatile solids',Follows from beta and SE
+break-even at 85pct,Section 3.4,39,abs,2,04_breakeven_loading.csv,scenario_loading_g_VS_per_L,heat_recovery == '85%',Follows from delta Y
+break-even at 70pct,Section 3.4,78,abs,3,04_breakeven_loading.csv,scenario_loading_g_VS_per_L,heat_recovery == '70%',Follows from delta Y
+break-even at 50pct,Section 3.4,130,abs,5,04_breakeven_loading.csv,scenario_loading_g_VS_per_L,heat_recovery == '50%',Follows from delta Y
+RF algorithms arm,Table S18,-0.174,resample,0.06,05_robustness_algorithms.csv,median,model == 'RandomForest',Seeds differ
+LightGBM,Table S18,-0.249,resample,0.08,05_robustness_algorithms.csv,median,model == 'LightGBM',Library version defaults differ
+XGBoost,Table S18,-0.498,resample,0.10,05_robustness_algorithms.csv,median,model == 'XGBoost',Library version defaults differ
+tuned RF,Table S19,-0.103,resample,0.08,05_robustness_tuning.csv,median,arm.str.contains('tuned'),Search grid or n_iter differs
+default RF 12 splits,Table S19,-0.043,resample,0.08,05_robustness_tuning.csv,median,arm.str.contains('default'),Number of tuning splits differs
+raw-string encoding,Table S20,0.077,resample,0.07,05_robustness_encoding.csv,median,encoding.str.contains('raw'),Raw string normalisation differs
+raw substrate levels,Table S20,69,exact,0,05_robustness_encoding.csv,substrate_levels,encoding.str.contains('raw'),Case or whitespace handling differs
+mapped substrate levels,Table S20,12,exact,0,05_robustness_encoding.csv,substrate_levels,encoding.str.contains('mapping'),Keyword rules differ
+basis ladder all records,Table S26,-0.174,resample,0.06,07_basis_sensitivity.csv,study_grouped,subset.str.contains('all harmonised'),Seeds differ
+basis ladder 212,Table S26,-0.019,resample,0.08,07_basis_sensitivity.csv,study_grouped,subset.str.contains('excluding COD'),Mass-basis classifier differs
+basis ladder native VS,Table S26,-1.11,resample,0.25,07_basis_sensitivity.csv,study_grouped,subset.str.contains('native volatile'),Native-VS subset definition differs
