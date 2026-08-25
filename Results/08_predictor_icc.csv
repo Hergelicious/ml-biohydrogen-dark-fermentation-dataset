@@ -1,6 +1,0 @@
-predictor,icc,kind,share_rows_in_single_study_levels
-pHn,0.7430099186160664,numeric,
-Tn,0.7229371485846168,numeric,
-sub_cat,0.9266467511570325,categorical (Cramer's V),0.11160714285714286
-inoc_cat,0.8648810668485768,categorical (Cramer's V),0.04017857142857143
-react_cat,0.8358469943968643,categorical (Cramer's V),0.09821428571428571
