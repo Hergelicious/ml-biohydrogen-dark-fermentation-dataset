@@ -1,0 +1,3 @@
+method,within_study,between_study,icc
+direct decomposition (raw yield),0.006122707288639834,0.011976127668769073,0.6617071041838827
+random-intercept mixed model (log1p yield),0.004017465854249801,0.007239480582665576,0.6431122883311272

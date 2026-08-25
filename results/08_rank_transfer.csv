@@ -1,0 +1,4 @@
+scope,unit,n_units,median,pct_lo,pct_hi,n_resamples,wilcoxon_p_independent_units
+pooled across the test partition,resample,40,0.22699825763162568,-0.5017393576087701,0.5504224159557423,40,
+within a held-out study,study-resample combination,80,0.2581988897471611,-0.7895995030403576,0.8944271909999159,80,
+"within-study, collapsed to one value per study",study,12,0.30083605731335,-0.6610924291238172,0.7897097134749389,12,0.088134765625

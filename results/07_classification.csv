@@ -1,0 +1,2 @@
+metric,chance_rate,median,pct_lo,pct_hi,n_resamples
+tertile classification accuracy,0.3333333333333333,0.41585177560473496,0.20559640522875816,0.6018181818181817,40

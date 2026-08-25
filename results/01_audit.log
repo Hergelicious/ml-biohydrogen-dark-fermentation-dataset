@@ -1,0 +1,6 @@
+19:55:45  INFO     reading /Users/hagarhassonahassan/Documents/2026 WORK/Heky Ahmoodi HA 2026/Repoo/data/Full_Data_set.csv
+19:55:45  INFO     compilation: 261 records, 84 sources
+19:55:45  INFO     conversion audit: 201 of 210 convertible records agree within 2%
+19:55:45  INFO     261 records - 51 excluded at compilation - 14 flagged for removal = 196 modelled
+19:55:45  INFO     wrote Full_Data_set_AUDITED.csv
+19:55:45  INFO     modelling set: 196 observations from 80 studies -> dataset_modelling_224.csv

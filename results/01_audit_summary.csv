@@ -1,0 +1,18 @@
+metric,value
+records in compilation,261
+sources in compilation,84
+convertible records,210
+convertible records agreeing,201
+excluded at compilation,51
+flagged for removal,14
+modelled observations,196
+modelled studies,80
+flag_arithmetic,9
+flag_per_slurry,0
+flag_above_thauer,8
+flag_exact_duplicate,13
+flag_review_duplicate,0
+flag_mw_basis,0
+flag_unit_suspect,2
+flag_pH_derived,1
+flag_T_derived,7

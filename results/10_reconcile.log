@@ -1,0 +1,42 @@
+20:07:35  INFO     reconciling 47 published values against results/
+20:07:36  INFO     ------------------------------------------------------------------------------
+20:07:36  INFO     PASS       8
+20:07:36  INFO     TOLERANCE  6
+20:07:36  INFO     MISMATCH   33
+20:07:36  INFO     MISSING    0
+20:07:36  INFO     ------------------------------------------------------------------------------
+20:07:36  WARNING  33 value(s) disagree beyond tolerance:
+20:07:36  WARNING    convertible records agreeing       paper 256.0      pipeline 201.0      | Conversion arithmetic or 2% tolerance differs
+20:07:36  WARNING    modelled observations              paper 224.0      pipeline 196.0      | Quality-flag logic differs
+20:07:36  WARNING    modelled studies                   paper 82.0       pipeline 80.0       | Grouping column differs
+20:07:36  WARNING    flag_arithmetic                    paper 1.0        pipeline 9.0        | Tolerance threshold differs
+20:07:36  WARNING    flag_unit_suspect                  paper 1.0        pipeline 2.0        | Factor-1000 detection rule differs
+20:07:36  WARNING    flag_per_slurry                    paper 16.0       pipeline 0.0        | Unit-string matching differs
+20:07:36  WARNING    flag_review_duplicate              paper 12.0       pipeline 0.0        | Source Type column absent or coded differently
+20:07:36  WARNING    flag_mw_basis                      paper 1.0        pipeline 0.0        | MW Basis Note column absent
+20:07:36  WARNING    flag_exact_duplicate               paper 4.0        pipeline 13.0       | Duplicate key definition differs
+20:07:36  WARNING    target SD                          paper 0.147      pipeline 0.13334    | Modelling set composition differs
+20:07:36  WARNING    RF row-wise                        paper 0.439      pipeline 0.34374    | Seeds or n_estimators differ
+20:07:36  WARNING    CatBoost study-grouped             paper -0.35      pipeline -0.16106   | CatBoost defaults differ between versions
+20:07:36  WARNING    Ridge study-grouped                paper -0.314     pipeline -0.37591   | Alpha or encoding differs
+20:07:36  WARNING    mean predictor study-grouped       paper -0.18      pipeline -0.09407   | Split seeds differ
+20:07:36  WARNING    RF grouped RMSE                    paper 0.124      pipeline 0.11193    | Follows from the grouped R2 difference
+20:07:36  WARNING    raw-yield ICC                      paper 0.708      pipeline 0.66171    | Modelling set composition differs
+20:07:36  WARNING    mixed-model ICC                    paper 0.568      pipeline 0.64311    | REML convergence or transform differs
+20:07:36  WARNING    mixed-basis beta per C             paper 0.00184    pipeline 0.00132    | Complete-case set or mode coding differs
+20:07:36  WARNING    mixed-basis p                      paper 0.0083     pipeline 0.07128    | Complete-case set differs
+20:07:36  WARNING    mixed-basis n                      paper 195.0      pipeline 169.0      | Missing-metadata handling differs
+20:07:36  WARNING    mixed-basis studies                paper 75.0       pipeline 73.0       | Missing-metadata handling differs
+20:07:36  WARNING    native-VS p                        paper 0.2969     pipeline 0.20886    | Native-VS subset definition differs
+20:07:36  WARNING    native-VS n                        paper 84.0       pipeline 91.0       | Unit-string filter for 'VS' differs
+20:07:36  WARNING    native-VS delta Y lower CI         paper -0.023     pipeline -0.01611   | Follows from beta and SE
+20:07:36  WARNING    break-even at 85pct                paper 39.0       pipeline 35.6       | Follows from delta Y
+20:07:36  WARNING    break-even at 70pct                paper 78.0       pipeline 71.2       | Follows from delta Y
+20:07:36  WARNING    break-even at 50pct                paper 130.0      pipeline 118.6      | Follows from delta Y
+20:07:36  WARNING    XGBoost                            paper -0.498     pipeline -0.36829   | Library version defaults differ
+20:07:36  WARNING    tuned RF                           paper -0.103     pipeline -0.00945   | Search grid or n_iter differs
+20:07:36  WARNING    raw-string encoding                paper 0.077      pipeline -0.05911   | Raw string normalisation differs
+20:07:36  WARNING    raw substrate levels               paper 69.0       pipeline 66.0       | Case or whitespace handling differs
+20:07:36  WARNING    basis ladder 212                   paper -0.019     pipeline -0.18141   | Mass-basis classifier differs
+20:07:36  WARNING    basis ladder native VS             paper -1.11      pipeline -0.73867   | Native-VS subset definition differs
+20:07:36  INFO     NOT YET RECONCILED. Resolve the items above before publishing the repository alongside the manuscript.

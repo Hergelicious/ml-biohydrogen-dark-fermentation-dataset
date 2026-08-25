@@ -1,0 +1,4 @@
+heat_recovery,scenario_loading_g_VS_per_L,lower_bound_g_VS_per_L,upper_bound_g_VS_per_L,interpretation
+85%,35.6,13.6,unbounded,conditional scenario calculation at the point estimate; not an established threshold
+70%,71.2,27.2,unbounded,conditional scenario calculation at the point estimate; not an established threshold
+50%,118.6,45.4,unbounded,conditional scenario calculation at the point estimate; not an established threshold

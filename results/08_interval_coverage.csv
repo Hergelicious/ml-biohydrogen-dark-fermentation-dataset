@@ -1,0 +1,2 @@
+nominal_coverage,empirical_coverage_median,empirical_coverage_lo,empirical_coverage_hi,median_interval_width,verdict
+0.9,0.8083904800322711,0.5256127450980392,0.9434224318658281,0.26820666666666665,anticonservative

@@ -1,0 +1,18 @@
+19:57:58  INFO     modelling set: 196 observations nested within 80 studies
+19:58:10  INFO       RandomForest   median grouped R2 = -0.137  [-1.065, +0.348]
+19:58:10  INFO       MeanPredictor  median grouped R2 = -0.094  [-1.172, -0.000]
+19:58:13  INFO       LightGBM       median grouped R2 = -0.301  [-1.520, +0.219]
+19:58:13  INFO       Ridge          median grouped R2 = -0.376  [-1.899, +0.189]
+19:58:22  INFO       CatBoost       median grouped R2 = -0.161  [-1.355, +0.396]
+19:58:28  INFO       XGBoost        median grouped R2 = -0.368  [-2.186, +0.148]
+19:59:15  INFO       tuning: default -0.076 vs tuned -0.009 over 12 grouped splits
+19:59:26  INFO       raw literature strings               levels= 66  median R2 = -0.059
+19:59:37  INFO       coarse three-class substrate + mode  levels=  3  median R2 = -0.193
+19:59:49  INFO       mapping used in this work            levels= 12  median R2 = -0.137
+20:00:13  INFO       removing Cárdenas et al., 2018          (16 rows) -> median R2 = -0.211
+20:00:25  INFO       removing Akhbari & Ibrahim, 2022        (13 rows) -> median R2 = -0.197
+20:00:36  INFO       removing Ghimire et al., 2015           (11 rows) -> median R2 = -0.249
+20:00:48  INFO       removing Albuquerque et al., 2024       (11 rows) -> median R2 = -0.143
+20:00:59  INFO       removing Di Perta et al., 2022          (11 rows) -> median R2 = -0.123
+20:01:11  INFO       removing Łukajtis et al., 2018          ( 9 rows) -> median R2 = -0.193
+20:01:11  INFO     done

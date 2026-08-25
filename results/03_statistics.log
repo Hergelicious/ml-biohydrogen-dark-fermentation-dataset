@@ -1,0 +1,15 @@
+19:57:31  INFO     modelling set: 196 observations nested within 80 studies
+19:57:31  INFO     ICC: direct decomposition 0.662, mixed model on log1p 0.643
+19:57:31  INFO     learning curve: 16 studies held out (50 observations), 64 available for training
+19:57:35  INFO       10 training studies -> median R2 = -0.144
+19:57:39  INFO       20 training studies -> median R2 = -0.134
+19:57:43  INFO       30 training studies -> median R2 = -0.286
+19:57:47  INFO       40 training studies -> median R2 = -0.306
+19:57:51  INFO       50 training studies -> median R2 = -0.311
+19:57:55  INFO       60 training studies -> median R2 = -0.304
+19:57:55  INFO     slope = -0.0036 per additional study, bootstrap 95% CI [-0.0048, -0.0023] (fitted to all 90 per-repeat values)
+19:57:55  INFO     mixed basis meta-regression: n = 169 records, 73 studies (complete case)
+19:57:55  INFO       temperature beta = +0.00132 per C (SE 0.00073, p = 0.0713); back-transformed 37 -> 0.026499 dm3 H2 g-1 at baseline 0.1045
+19:57:55  INFO     native volatile solids meta-regression: n = 91 records, 36 studies (complete case)
+19:57:55  INFO       temperature beta = +0.00150 per C (SE 0.00119, p = 0.2089); back-transformed 37 -> 0.0293926 dm3 H2 g-1 at baseline 0.0742
+19:57:55  INFO     done

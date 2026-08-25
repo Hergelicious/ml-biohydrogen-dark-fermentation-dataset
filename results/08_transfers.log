@@ -1,0 +1,9 @@
+20:05:07  INFO     modelling set: 196 observations nested within 80 studies
+20:05:19  INFO     within-study rank: median rho = +0.26 over 80 study-resample combinations; collapsed to 12 independent studies the median is +0.30 (Wilcoxon p = 0.0881)
+20:05:19  INFO     nominal 90% intervals achieve 0.81 empirical coverage, median width 0.268
+20:05:19  INFO       pH                 intraclass correlation               0.449
+20:05:19  INFO       temperature_C      intraclass correlation               0.535
+20:05:19  INFO       substrate_class    Cramer's V against study identity    0.608
+20:05:19  INFO       inoculum_class     Cramer's V against study identity    0.653
+20:05:19  INFO       reactor_mode       Cramer's V against study identity    0.592
+20:05:19  INFO     done

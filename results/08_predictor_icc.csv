@@ -1,0 +1,6 @@
+predictor,statistic,value
+pH,intraclass correlation,0.449
+temperature_C,intraclass correlation,0.535
+substrate_class,Cramer's V against study identity,0.608
+inoculum_class,Cramer's V against study identity,0.653
+reactor_mode,Cramer's V against study identity,0.592

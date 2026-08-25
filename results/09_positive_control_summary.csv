@@ -1,0 +1,6 @@
+quantity,value,note
+grouped R2 at the lowest ICC tested,0.257,positive value shows the design detects transferable signal at this n
+ICC at which grouped R2 crosses zero,0.46969047619047616,"above this, a model cannot beat predicting the overall mean"
+ICC at which grouped R2 falls below a mean predictor,0.4958974358974359,design target for compiled datasets in this field
+ICC of the real harmonised target,0.6617071041838827,where this literature actually sits
+share of Var(f(X)) between studies,0.6824854570910295,predictor-study collinearity carried over from the real compilation

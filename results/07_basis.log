@@ -1,0 +1,13 @@
+20:02:40  INFO     mass-basis composition:
+                    mass_basis  records  studies
+               volatile solids      108       38
+molar (per substrate molecule)       78       41
+                   dry biomass        6        1
+        chemical oxygen demand        2        1
+                      unstated        2        1
+20:03:13  INFO     all harmonised records                               n=196 k=80  grouped R2 = -0.137  gap = +0.481  ICC = 0.662
+20:03:49  INFO     excluding COD, dry-biomass and unstated bases        n=186 k=78  grouped R2 = -0.181  gap = +0.518  ICC = 0.647
+20:04:23  INFO     excluding the Group C hexose-equivalent convention also n=154 k=70  grouped R2 = -0.365  gap = +0.692  ICC = 0.600
+20:04:55  INFO     native volatile solids only                          n=108 k=38  grouped R2 = -0.739  gap = +1.072  ICC = 0.672
+20:05:06  INFO     error vs training centroid: Spearman rho = 0.52 over 251 study-resample combinations (not independent; each study recurs across resamples, so the nominal p = 4.86e-19 is anticonservative)
+20:05:06  INFO     done

@@ -1,0 +1,23 @@
+20:05:20  INFO     real structure preserved: 196 observations nested within 80 studies
+20:05:20  INFO     real target ICC = 0.662
+20:05:20  INFO     signal f(X): 39 design columns; Var(f(X)) fixed at 1.00
+20:05:20  INFO     share of Var(f(X)) lying between studies = 0.682  (predictors are themselves largely study markers)
+20:05:32  INFO     sigma_u^2= 0.00  ICC=0.227 | grouped R2=+0.257  row-wise=+0.289  mean=-0.020  oracle=+0.526  gap=+0.032
+20:05:43  INFO     sigma_u^2= 0.10  ICC=0.290 | grouped R2=+0.190  row-wise=+0.280  mean=-0.018  oracle=+0.484  gap=+0.090
+20:05:54  INFO     sigma_u^2= 0.25  ICC=0.346 | grouped R2=+0.144  row-wise=+0.242  mean=-0.020  oracle=+0.447  gap=+0.098
+20:06:05  INFO     sigma_u^2= 0.50  ICC=0.416 | grouped R2=+0.055  row-wise=+0.217  mean=-0.021  oracle=+0.387  gap=+0.163
+20:06:15  INFO     sigma_u^2= 0.90  ICC=0.498 | grouped R2=-0.029  row-wise=+0.194  mean=-0.027  oracle=+0.325  gap=+0.224
+20:06:27  INFO     sigma_u^2= 1.50  ICC=0.582 | grouped R2=-0.089  row-wise=+0.162  mean=-0.031  oracle=+0.263  gap=+0.251
+20:06:37  INFO     sigma_u^2= 2.50  ICC=0.672 | grouped R2=-0.158  row-wise=+0.130  mean=-0.035  oracle=+0.192  gap=+0.288
+20:06:48  INFO     sigma_u^2= 4.00  ICC=0.751 | grouped R2=-0.209  row-wise=+0.118  mean=-0.035  oracle=+0.108  gap=+0.326
+20:07:00  INFO     sigma_u^2= 6.50  ICC=0.821 | grouped R2=-0.287  row-wise=+0.090  mean=-0.038  oracle=+0.049  gap=+0.376
+20:07:11  INFO     sigma_u^2=10.00  ICC=0.871 | grouped R2=-0.359  row-wise=+0.060  mean=-0.040  oracle=+0.013  gap=+0.419
+20:07:23  INFO     sigma_u^2=16.00  ICC=0.913 | grouped R2=-0.436  row-wise=+0.026  mean=-0.039  oracle=-0.011  gap=+0.461
+20:07:35  INFO     sigma_u^2=26.00  ICC=0.943 | grouped R2=-0.427  row-wise=+0.033  mean=-0.037  oracle=-0.030  gap=+0.460
+20:07:35  INFO     ------------------------------------------------------------------------
+20:07:35  INFO     grouped R2 at lowest ICC tested        = +0.257
+20:07:35  INFO     grouped R2 crosses zero at ICC         = 0.470
+20:07:35  INFO     grouped R2 falls below mean pred. at   = 0.496
+20:07:35  INFO     real harmonised target sits at ICC     = 0.662
+20:07:35  INFO     CONCLUSION: the real compilation lies above the threshold at which a transferable signal of this strength becomes undetectable under grouped validation. The design is not underpowered; the between-study variance is too large relative to the transferable signal.
+20:07:35  INFO     done
